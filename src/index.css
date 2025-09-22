@@ -161,4 +161,28 @@
   .animate-glow {
     animation: glow 2s ease-in-out infinite;
   }
+
+  /* Hide Instagram hashtags and captions */
+  .instagram-media [data-testid="post-caption"],
+  .instagram-media [data-testid="post-caption"] *,
+  .instagram-media ._a9zs,
+  .instagram-media ._a9zs *,
+  .instagram-media [class*="caption"],
+  .instagram-media [class*="Caption"],
+  .instagram-media [class*="text"],
+  .instagram-media [class*="Text"],
+  .instagram-media [class*="hashtag"],
+  .instagram-media [class*="Hashtag"],
+  .instagram-media a[href*="#"],
+  .instagram-media span:has(a[href*="#"]),
+  .instagram-media div:has(a[href*="#"]),
+  .instagram-media p:has(a[href*="#"]),
+  .instagram-media [class*="comment"],
+  .instagram-media [class*="Comment"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
 }

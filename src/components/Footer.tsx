@@ -13,6 +13,7 @@ import {
   Award,
   Truck
 } from "lucide-react";
+import logomegh from "@/assets/logomegh.png";
 
 const Footer = () => {
   return (
@@ -46,9 +47,13 @@ const Footer = () => {
           {/* Company Info */}
           <div className="lg:col-span-2">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold mb-2">
-                MeghDoot <span className="gradient-text">Textiles</span>
-              </h2>
+              <div className="mb-4">
+                <img 
+                  src={logomegh} 
+                  alt="MeghDoot Textiles" 
+                  className="h-16 w-auto object-contain"
+                />
+              </div>
               <p className="text-primary-foreground/80 mb-4">
                 Wholesale Indian Ethnicwear from Surat. Serving retailers, 
                 resellers and boutiques with premium quality ethnic wear since 1998.
@@ -100,21 +105,21 @@ const Footer = () => {
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               {[
-                "Shop All Categories",
-                "New Arrivals", 
-                "Featured Catalogs",
-                "How to Order",
-                "Size Guide",
-                "FAQs",
-                "About Us",
-                "Contact"
+                { name: "Shop All Categories", path: "/shop" },
+                { name: "New Arrivals", path: "/new-arrivals" },
+                { name: "Featured Catalogs", path: "/catalogs" },
+                { name: "How to Order", path: "/wholesale-ordering" },
+                { name: "Size Guide", path: "/size-guide" },
+                { name: "FAQs", path: "/faqs" },
+                { name: "About Us", path: "/about" },
+                { name: "Contact", path: "/contact" }
               ].map((link) => (
-                <li key={link}>
+                <li key={link.name}>
                   <a 
-                    href="#" 
+                    href={link.path} 
                     className="text-primary-foreground/80 hover:text-accent transition-colors text-sm"
                   >
-                    {link}
+                    {link.name}
                   </a>
                 </li>
               ))}
@@ -126,20 +131,20 @@ const Footer = () => {
             <h3 className="text-lg font-semibold mb-4">For Business</h3>
             <ul className="space-y-2 mb-6">
               {[
-                "Create Trade Account",
-                "Bulk Inquiry Form", 
-                "MOQs & Lead Times",
-                "Privacy Policy",
-                "Terms & Conditions",
-                "Refund Policy",
-                "Shipping Policy"
+                { name: "Create Trade Account", path: "/trade-account" },
+                { name: "Bulk Inquiry Form", path: "/bulk-inquiry" },
+                { name: "MOQs & Lead Times", path: "/moqs-lead-times" },
+                { name: "Privacy Policy", path: "/privacy-policy" },
+                { name: "Terms & Conditions", path: "/terms-conditions" },
+                { name: "Refund Policy", path: "/refund-policy" },
+                { name: "Shipping Policy", path: "/shipping-policy" }
               ].map((link) => (
-                <li key={link}>
+                <li key={link.name}>
                   <a 
-                    href="#" 
+                    href={link.path} 
                     className="text-primary-foreground/80 hover:text-accent transition-colors text-sm"
                   >
-                    {link}
+                    {link.name}
                   </a>
                 </li>
               ))}

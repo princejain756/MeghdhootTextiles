@@ -1,14 +1,44 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Disallow admin and private areas
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /tmp/
+Disallow: /node_modules/
+Disallow: /.env
+Disallow: /package.json
+Disallow: /package-lock.json
+Disallow: /yarn.lock
+Disallow: /README.md
+Disallow: /Dockerfile
+Disallow: /docker-compose.yml
+Disallow: /nginx.conf
+Disallow: /.git/
+Disallow: /.gitignore
+Disallow: /.dockerignore
+
+# Allow important pages
+Allow: /shop
+Allow: /new-arrivals
+Allow: /catalogs
+Allow: /about
+Allow: /contact
+Allow: /size-guide
+Allow: /faqs
+Allow: /trade-account
+Allow: /bulk-inquiry
+Allow: /moqs-lead-times
+Allow: /privacy-policy
+Allow: /terms-conditions
+Allow: /refund-policy
+Allow: /shipping-policy
+
+# Sitemap
+Sitemap: https://meghdoottextiles.com/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1

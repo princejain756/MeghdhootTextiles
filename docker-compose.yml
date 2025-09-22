@@ -1,0 +1,35 @@
+name: meghdoot-trade-hub-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: meghdoot-postgres-6545
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: meghdoot
+      POSTGRES_USER: meghdoot
+      POSTGRES_PASSWORD: meghdoot
+    ports:
+      - "6545:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meghdoot -d meghdoot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional UI for inspecting the DB
+  adminer:
+    image: adminer:4
+    container_name: meghdoot-adminer-8095
+    restart: unless-stopped
+    ports:
+      - "8095:8080"
+    depends_on:
+      - db
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+
+volumes:
+  db-data:

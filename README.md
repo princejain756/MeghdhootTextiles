@@ -60,6 +60,59 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+The admin and customer portals are backed by a dedicated Express + Prisma API that persists data to PostgreSQL.
+
+## Running the app locally
+
+### Backend (Express + Prisma + PostgreSQL)
+
+You can run the DB either with your own PostgreSQL, or with Docker (recommended for quick start).
+
+#### Option A: Dockerized PostgreSQL (recommended)
+
+1. Start the DB:
+   - From project root: `docker compose up -d db`
+2. Setup the server env:
+   - `cp server/.env.example server/.env`
+   - Update `JWT_SECRET` to a long random string (>= 32 chars)
+3. Install deps and generate Prisma client:
+   - `cd server && npm install && npm run prisma:generate`
+4. Create schema and seed admin user:
+   - `npm run prisma:migrate -- --name init`
+   - `npm run prisma:seed`
+5. Start the API:
+   - `npm run dev`
+
+> The DB is exposed at `localhost:6545` (db: `meghdoot`, user: `meghdoot`, password: `meghdoot`).
+
+#### Option B: Existing PostgreSQL
+
+1. `cd server`
+2. `npm install`
+3. Copy `.env.example` to `.env` and point `DATABASE_URL` to your database; set `JWT_SECRET` and `CLIENT_ORIGIN`.
+4. `npm run prisma:generate`
+5. `npm run prisma:migrate` (create the schema in your PostgreSQL database)
+6. `npm run prisma:seed` (creates the default `admin` user with password `AdminMegh1412@4`)
+7. `npm run dev`
+
+> The API listens on `http://localhost:5000` by default. Update `CLIENT_ORIGIN` (e.g. `http://localhost:5173`) to enable cookie-based auth during local development.
+
+### Frontend (Vite + React)
+
+1. From the project root, `npm install`
+2. Copy `.env.example` to `.env` and set `VITE_API_URL` (e.g. `http://localhost:5000/api`)
+3. `npm run dev`
+
+## Admin credentials
+
+The seed script provisions an administrator:
+
+- Username: `admin`
+- Email: `admin@meghdoot.com`
+- Password: `AdminMegh1412@4`
+
+Admin users can manage products, view every order, respond to support tickets, and update delivery information. Registered trade partners get a tailored dashboard for orders, delivery timelines, and support conversations.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/b09a0513-8085-46e0-bdf6-098c384950ac) and click on Share -> Publish.
@@ -71,3 +124,4 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# MeghdhootTextiles
