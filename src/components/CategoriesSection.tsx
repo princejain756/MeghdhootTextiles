@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles } from "lucide-react";
 import catalogImage from "@/assets/catalog-showcase.jpg";
+import { Link } from "react-router-dom";
 
 const CategoriesSection = () => {
   const categories = [
@@ -92,13 +93,17 @@ const CategoriesSection = () => {
                         <span className="text-accent font-medium">
                           {category.catalogCount}
                         </span>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          asChild
+                          size="sm"
                           className="bg-white/20 text-white border-white/30 hover:bg-white hover:text-primary backdrop-blur-sm transition-all duration-300 group-hover:translate-x-1"
                           variant="outline"
                         >
-                          Explore
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                          {/* Route to catalogs with a pre-filled search for this category */}
+                          <Link to={`/catalogs?q=${encodeURIComponent(category.name)}`}>
+                            Explore
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Link>
                         </Button>
                       </div>
                     </div>
@@ -123,9 +128,11 @@ const CategoriesSection = () => {
               Stay ahead of fashion trends with our constantly updated inventory. 
               New catalogs added every week from top designers and manufacturers.
             </p>
-            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
-              View New Arrivals
-              <ArrowRight className="ml-2 h-5 w-5" />
+            <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Link to="/new-arrivals">
+                View New Arrivals
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
           

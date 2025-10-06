@@ -28,49 +28,6 @@ import PriceHoldStrip from "@/components/fomo/PriceHoldStrip";
 
 type CatalogCategory = "all" | "sarees" | "kurtis" | "fusion" | "menswear";
 
-const catalogCollections = [
-  {
-    title: "Festive 2024 Saree Compendium",
-    category: "sarees" as const,
-    updated: "02 Oct 2024",
-    downloads: "1,420",
-    highlights: ["18 fresh colorways", "Handloom + digital print", "MOQ 10"],
-    formats: ["PDF", "PNG lookbook", "XLSX price"],
-  },
-  {
-    title: "Boutique Luxe Kurtis",
-    category: "kurtis" as const,
-    updated: "28 Sep 2024",
-    downloads: "980",
-    highlights: ["Modal silk", "Sizes XS-XXL", "Retail copy"],
-    formats: ["Interactive PDF", "Flat-lay pack"],
-  },
-  {
-    title: "Fusion Co-ords Resort 2025",
-    category: "fusion" as const,
-    updated: "18 Sep 2024",
-    downloads: "612",
-    highlights: ["Satin georgette", "Trend deck", "MOQ 8"],
-    formats: ["PDF", "Social kit"],
-  },
-  {
-    title: "Menswear Ethnic Capsule",
-    category: "menswear" as const,
-    updated: "12 Sep 2024",
-    downloads: "402",
-    highlights: ["Pathani sets", "Size grid", "Fabric specs"],
-    formats: ["PDF", "Line sheet"],
-  },
-  {
-    title: "Daily Essentials Sarees",
-    category: "sarees" as const,
-    updated: "30 Sep 2024",
-    downloads: "1,120",
-    highlights: ["Easy reorder", "MOQ 6", "Dispatch 48h"],
-    formats: ["PDF", "CSV price"],
-  },
-];
-
 const categoryOptions: { id: CatalogCategory; label: string }[] = [
   { id: "all", label: "All" },
   { id: "sarees", label: "Sarees" },
@@ -124,7 +81,7 @@ const Catalogs = () => {
     setSearchParams(next, { replace: true });
   }, [debouncedQuery, category]);
 
-  // Try loading catalogs from API; fallback to local seed
+  // Load catalogs from API
   const catalogsQuery = useQuery({
     queryKey: ["catalogs", "public"],
     queryFn: () => CatalogApi.list(),
@@ -133,9 +90,7 @@ const Catalogs = () => {
   const apiCatalogs: ApiCatalog[] = catalogsQuery.data?.catalogs ?? [];
 
   const featuredCatalogs = useMemo(() => {
-    const api = apiCatalogs;
-    if (!api.length) return catalogCollections;
-    return api.map((c) => ({
+    return apiCatalogs.map((c) => ({
       title: c.title,
       category: (c.category ?? "sarees") as CatalogCategory,
       updated: new Date(c.updatedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
@@ -406,66 +361,72 @@ const Catalogs = () => {
             <span>{filteredCatalogs.length} curated files available</span>
           </div>
         </div>
-        <div className="mt-10 grid gap-8 lg:grid-cols-2">
-          {filteredCatalogs.map((catalog) => (
-            <Card key={catalog.title} className="border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-              <CardHeader className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className="rounded-full border-accent text-xs uppercase tracking-wide">
-                    {catalog.category}
-                  </Badge>
-                  <Badge className="bg-accent/10 text-xs text-accent">
-                    Updated {catalog.updated}
-                  </Badge>
-                </div>
-                <CardTitle className="text-xl leading-tight">{catalog.title}</CardTitle>
-                <CardDescription className="text-sm text-muted-foreground">
-                  {catalog.highlights.join(" • ")}
-                </CardDescription>
-                {/* FOMO chips */}
-                <CatalogFomoChips keySeed={catalog.title} />
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div className="flex flex-wrap gap-2">
-                  {catalog.formats.map((format) => (
-                    <Badge key={format} variant="secondary" className="rounded-full border border-dashed border-border/70">
-                      {format}
+        {filteredCatalogs.length === 0 ? (
+          <div className="mt-10 rounded-lg border border-dashed border-border/70 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+            No live catalogs yet. Once you add catalogs in the dashboard, they will appear here.
+          </div>
+        ) : (
+          <div className="mt-10 grid gap-8 lg:grid-cols-2">
+            {filteredCatalogs.map((catalog) => (
+              <Card key={catalog.title} className="border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                <CardHeader className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="rounded-full border-accent text-xs uppercase tracking-wide">
+                      {catalog.category}
                     </Badge>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-3">
-                  <span className="text-muted-foreground">Downloads</span>
-                  <span className="font-semibold text-foreground">{catalog.downloads}</span>
-                </div>
-                {/* Territory slots / queue */}
-                <CatalogSidebarFomo keySeed={catalog.title} />
-              </CardContent>
-              <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-6 py-4">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">Includes lookbook + price sheet</span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => downloadCatalogCSV(catalog.title, (catalog as any).items)}
-                    disabled={!(catalog as any).items?.length}
-                    title={(catalog as any).items?.length ? "Download CSV" : "Available on live catalogs"}
-                  >
-                    <FileDown className="mr-2 h-4 w-4" /> CSV
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openCatalogPrintView(catalog.title, (catalog as any).items)}
-                    disabled={!(catalog as any).items?.length}
-                    title={(catalog as any).items?.length ? "Download PDF" : "Available on live catalogs"}
-                  >
-                    <ArrowUpRight className="mr-2 h-4 w-4" /> PDF
-                  </Button>
-                </div>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+                    <Badge className="bg-accent/10 text-xs text-accent">
+                      Updated {catalog.updated}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-xl leading-tight">{catalog.title}</CardTitle>
+                  <CardDescription className="text-sm text-muted-foreground">
+                    {catalog.highlights.join(" • ")}
+                  </CardDescription>
+                  {/* FOMO chips */}
+                  <CatalogFomoChips keySeed={catalog.title} />
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                  <div className="flex flex-wrap gap-2">
+                    {catalog.formats.map((format) => (
+                      <Badge key={format} variant="secondary" className="rounded-full border border-dashed border-border/70">
+                        {format}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-3">
+                    <span className="text-muted-foreground">Downloads</span>
+                    <span className="font-semibold text-foreground">{catalog.downloads}</span>
+                  </div>
+                  {/* Territory slots / queue */}
+                  <CatalogSidebarFomo keySeed={catalog.title} />
+                </CardContent>
+                <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-6 py-4">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">Includes lookbook + price sheet</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => downloadCatalogCSV(catalog.title, (catalog as any).items)}
+                      disabled={!(catalog as any).items?.length}
+                      title={(catalog as any).items?.length ? "Download CSV" : "Available on live catalogs"}
+                    >
+                      <FileDown className="mr-2 h-4 w-4" /> CSV
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openCatalogPrintView(catalog.title, (catalog as any).items)}
+                      disabled={!(catalog as any).items?.length}
+                      title={(catalog as any).items?.length ? "Download PDF" : "Available on live catalogs"}
+                    >
+                      <ArrowUpRight className="mr-2 h-4 w-4" /> PDF
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="bg-secondary/40 py-16">

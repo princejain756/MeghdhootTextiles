@@ -27,6 +27,7 @@ import Contact from "./pages/Contact";
 import ProtectedRoute from "@/components/routing/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
 import RecentActivityToaster from "@/components/fomo/RecentActivityToaster";
+import SupportChatWidget from "@/components/chat/SupportChatWidget";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        {/* Global support chat widget */}
+        <SupportChatWidget />
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
