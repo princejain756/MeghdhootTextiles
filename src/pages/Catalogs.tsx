@@ -21,10 +21,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileDown, Search, Sparkles, Layers, Library, Shield, ArrowUpRight } from "lucide-react";
 import type { ApiCatalog } from "@/types/api";
 import logomegh from "@/assets/logomegh.png";
-import { CatalogFomoChips, CatalogSidebarFomo } from "@/components/fomo/CatalogFomoChips";
-import PerkProgressBar from "@/components/fomo/PerkProgressBar";
 import ProductGrid from "@/components/ProductGrid";
-import PriceHoldStrip from "@/components/fomo/PriceHoldStrip";
 
 type CatalogCategory = "all" | "sarees" | "kurtis" | "fusion" | "menswear";
 
@@ -382,8 +379,6 @@ const Catalogs = () => {
                   <CardDescription className="text-sm text-muted-foreground">
                     {catalog.highlights.join(" • ")}
                   </CardDescription>
-                  {/* FOMO chips */}
-                  <CatalogFomoChips keySeed={catalog.title} />
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
                   <div className="flex flex-wrap gap-2">
@@ -398,7 +393,6 @@ const Catalogs = () => {
                     <span className="font-semibold text-foreground">{catalog.downloads}</span>
                   </div>
                   {/* Territory slots / queue */}
-                  <CatalogSidebarFomo keySeed={catalog.title} />
                 </CardContent>
                 <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-6 py-4">
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">Includes lookbook + price sheet</span>
@@ -534,7 +528,6 @@ const Catalogs = () => {
       </section>
 
       <section className="container mx-auto px-4 py-10 space-y-4">
-        <PriceHoldStrip />
         <PerkProgressBar />
       </section>
 

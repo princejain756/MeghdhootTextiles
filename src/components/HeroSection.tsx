@@ -68,8 +68,8 @@ const HeroSection = () => {
 
           {/* Main heading */}
           <h1 className="text-hero text-primary-foreground mb-6">
-            Wholesale Indian Ethnicwear from{" "}
-            <span className="gradient-text">Surat</span>
+            Manufacturer & Wholesaler of Indian Ethnicwear from{" "}
+            <span className="gradient-text">Bengaluru | Surat | Kolkata</span>
           </h1>
 
           {/* Subheading */}

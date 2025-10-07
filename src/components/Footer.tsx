@@ -55,7 +55,7 @@ const Footer = () => {
                 />
               </div>
               <p className="text-primary-foreground/80 mb-4">
-                Wholesale Indian Ethnicwear from Surat. Serving retailers, 
+                Manufacturer & Wholesaler of Indian Ethnicwear from Bengaluru, Surat & Kolkata. Serving retailers, 
                 resellers and boutiques with premium quality ethnic wear since 1998.
               </p>
             </div>

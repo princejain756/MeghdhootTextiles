@@ -9,7 +9,6 @@ import {
   DrawerClose,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import PriceHoldStrip from "@/components/fomo/PriceHoldStrip";
 import { Separator } from "@/components/ui/separator";
 
 type CartDrawerProps = {
@@ -34,9 +33,6 @@ export default function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
           <DrawerTitle>Your cart</DrawerTitle>
           <DrawerDescription>Review selections and reserve pricing.</DrawerDescription>
         </DrawerHeader>
-        <div className="px-4">
-          <PriceHoldStrip />
-        </div>
         <div className="px-4 py-4">
           <div className="space-y-4">
             {items.map((it) => (

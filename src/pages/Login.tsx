@@ -85,9 +85,6 @@ const Login = () => {
           <Card className="shadow-xl border rounded-2xl">
             <CardHeader>
               <CardTitle className="text-2xl">Sign in</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Admin credentials: <span className="font-medium">admin</span> / <span className="font-mono">AdminMegh1412@4</span>
-              </p>
             </CardHeader>
             <CardContent>
               <Form {...form}>

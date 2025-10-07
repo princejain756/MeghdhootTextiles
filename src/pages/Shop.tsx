@@ -10,8 +10,6 @@ import {
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { CatalogFomoChips } from "@/components/fomo/CatalogFomoChips";
-import PriceHoldStrip from "@/components/fomo/PriceHoldStrip";
 import {
   Filter,
   Palette,
@@ -277,10 +275,6 @@ const Shop = () => {
                       </Badge>
                     ))}
                   </div>
-                  {/* FOMO chips on dark card */}
-                  <div className="backdrop-blur-sm">
-                    <CatalogFomoChips keySeed={collection.name} />
-                  </div>
                   <div className="space-y-3">
                     <h3 className="text-2xl font-semibold leading-tight">
                       {collection.name}
@@ -312,7 +306,6 @@ const Shop = () => {
 
       {/* Price-hold policy strip */}
       <section className="container mx-auto px-4 py-10">
-        <PriceHoldStrip />
       </section>
 
       <section className="bg-secondary/40 py-16">

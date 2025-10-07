@@ -18,8 +18,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { TrendingUp, Sparkles, CalendarDays, BellRing, Clock, Palette, ArrowUpRight } from "lucide-react";
-import { CatalogFomoChips, CatalogSidebarFomo } from "@/components/fomo/CatalogFomoChips";
-import PriceHoldStrip from "@/components/fomo/PriceHoldStrip";
 import ProductGrid from "@/components/ProductGrid";
 
 const arrivalHighlights = [
@@ -170,14 +168,12 @@ const NewArrivals = () => {
                 <CardDescription className="text-sm leading-relaxed text-muted-foreground">
                   {drop.description}
                 </CardDescription>
-                <CatalogFomoChips keySeed={drop.title} />
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-3 text-sm">
                   <span>{drop.focus}</span>
                   <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <CatalogSidebarFomo keySeed={drop.title} />
               </CardContent>
             </Card>
           ))}
@@ -247,7 +243,6 @@ const NewArrivals = () => {
 
       {/* Price-hold policy strip */}
       <section className="container mx-auto px-4 py-10">
-        <PriceHoldStrip />
       </section>
 
       <section className="container mx-auto px-4 py-16">

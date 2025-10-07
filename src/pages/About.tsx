@@ -24,7 +24,7 @@ import {
 const timeline = [
   {
     year: "1998",
-    title: "Founded in Surat",
+    title: "Founded in Bangalore",
     description: "MeghDoot textiles starts as a boutique saree studio focused on handcrafted bridal wear for local retailers.",
   },
   {
