@@ -22,6 +22,15 @@ import { FileDown, Search, Sparkles, Layers, Library, Shield, ArrowUpRight } fro
 import type { ApiCatalog } from "@/types/api";
 import logomegh from "@/assets/logomegh.png";
 import ProductGrid from "@/components/ProductGrid";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// PDF thumbnails
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure PDF.js worker once per bundle
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+import PerkProgressBar from "@/components/fomo/PerkProgressBar";
 
 type CatalogCategory = "all" | "sarees" | "kurtis" | "fusion" | "menswear";
 
@@ -52,6 +61,104 @@ const faqItems = [
 ];
 
 const Catalogs = () => {
+  const thumbCache = useRef(new Map<string, string>()).current;
+
+  function PdfThumb({ url, alt }: { url: string; alt: string }) {
+    const [thumb, setThumb] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [errored, setErrored] = useState(false);
+    const hostRef = useRef<HTMLDivElement | null>(null);
+    const startedRef = useRef(false);
+
+    useEffect(() => {
+      const el = hostRef.current;
+      if (!el) return;
+
+      const start = () => {
+        if (startedRef.current) return;
+        startedRef.current = true;
+        (async () => {
+          try {
+            const cached = thumbCache.get(url);
+            if (cached) {
+              setThumb(cached);
+              setLoading(false);
+              return;
+            }
+            const loadingTask = (pdfjsLib as any).getDocument({ url });
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+            const containerWidth = hostRef.current?.clientWidth || 640;
+            const baseViewport = page.getViewport({ scale: 1 });
+            const scale = Math.min(1.2, Math.max(0.3, containerWidth / baseViewport.width));
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            await page.render({ canvasContext: ctx!, viewport }).promise;
+            const dataUrl = canvas.toDataURL("image/png");
+            thumbCache.set(url, dataUrl);
+            setThumb(dataUrl);
+          } catch (_e) {
+            setErrored(true);
+          } finally {
+            setLoading(false);
+          }
+        })();
+      };
+
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                start();
+                io.disconnect();
+              }
+            });
+          },
+          { rootMargin: "150px" }
+        );
+        io.observe(el);
+        return () => io.disconnect();
+      }
+
+      // Fallback without IO
+      start();
+    }, [url]);
+
+    return (
+      <div ref={hostRef} className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
+        {thumb ? (
+          <img src={thumb} alt={alt} className="h-full w-full object-contain bg-white" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            {errored ? "Preview unavailable" : loading ? "Generating preview…" : "Preview unavailable"}
+          </div>
+        )}
+      </div>
+    );
+  }
+  // Static PDF catalogs imported from assets (built-time glob)
+  const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
+  const staticPdfs = useMemo(() => {
+    const humanize = (file: string) =>
+      file
+        .replace(/^.*\//, "")
+        .replace(/\.[Pp][Dd][Ff]$/, "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .replace(/\s*\(\d+\)\s*/g, " ")
+        .trim();
+    return Object.entries(pdfModules)
+      .map(([path, url]) => ({ title: humanize(path), url }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, []);
+
+  // Lightweight viewer state
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [activePdf, setActivePdf] = useState<{ title: string; url: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialCategory = (searchParams.get("cat") as CatalogCategory) || "all";
@@ -116,6 +223,49 @@ const Catalogs = () => {
       return matchesCategory && matchesQuery;
     });
   }, [category, debouncedQuery, featuredCatalogs]);
+
+  const filteredStaticPdfs = useMemo(() => {
+    if (!debouncedQuery) return staticPdfs;
+    return staticPdfs.filter((p) => p.title.toLowerCase().includes(debouncedQuery.toLowerCase()));
+  }, [debouncedQuery, staticPdfs]);
+
+  // Surface local PDFs as recently added featured catalogs (Sarees)
+  type FeaturedLike = {
+    title: string;
+    category: CatalogCategory;
+    updated: string;
+    downloads: string;
+    highlights: string[];
+    formats: string[];
+    items?: Array<unknown>;
+    pdfUrl?: string;
+  };
+  const staticFeaturedCatalogs: FeaturedLike[] = useMemo(() => {
+    const nowLabel = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    return staticPdfs.map((p) => ({
+      title: p.title,
+      category: "sarees" as CatalogCategory,
+      updated: nowLabel,
+      downloads: "0",
+      highlights: ["New catalog", "Local PDF"],
+      formats: ["PDF"],
+      items: [],
+      pdfUrl: p.url,
+    }));
+  }, [staticPdfs]);
+
+  const allFeaturedCatalogs: FeaturedLike[] = useMemo(() => {
+    // Recently added first (local PDFs), then API results
+    return [...staticFeaturedCatalogs, ...featuredCatalogs];
+  }, [staticFeaturedCatalogs, featuredCatalogs]);
+
+  const filteredAllFeatured = useMemo(() => {
+    return allFeaturedCatalogs.filter((catalog) => {
+      const matchesCategory = category === "all" || catalog.category === category;
+      const matchesQuery = catalog.title.toLowerCase().includes(debouncedQuery.toLowerCase());
+      return matchesCategory && matchesQuery;
+    });
+  }, [allFeaturedCatalogs, category, debouncedQuery]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -335,13 +485,51 @@ const Catalogs = () => {
             </TabsList>
           </Tabs>
           <div className="mt-3 text-xs text-muted-foreground">
-            {liveCount} live products · {filteredCatalogs.length} featured catalogs
+            {liveCount} live products · {filteredAllFeatured.length} featured catalogs
           </div>
         </div>
         {category === "all" ? (
           <ProductGrid search={debouncedQuery} onResultCount={setLiveCount} />
         ) : (
           <ProductGrid category={category} search={debouncedQuery} onResultCount={setLiveCount} />
+        )}
+
+        {category === "sarees" && filteredStaticPdfs.length > 0 && (
+          <div className="mt-12">
+            <div className="mb-4 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-accent" />
+              <span className="text-sm text-muted-foreground">New saree catalogs</span>
+            </div>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredStaticPdfs.map((pdf) => (
+                <Card key={pdf.url} className="group border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+                  <CardHeader className="space-y-2">
+                    <CardTitle className="line-clamp-2 text-base leading-snug">{pdf.title}</CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">Catalog · PDF</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <PdfThumb url={pdf.url} alt={pdf.title} />
+                  </CardContent>
+                  <CardFooter className="flex items-center justify-between gap-2 border-t bg-muted/30 px-6 py-4">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setActivePdf(pdf);
+                        setPdfOpen(true);
+                      }}
+                    >
+                      View
+                    </Button>
+                    <Button asChild variant="outline" size="sm">
+                      <a href={pdf.url} download>
+                        Download
+                      </a>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
       </section>
 
@@ -355,16 +543,16 @@ const Catalogs = () => {
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="h-4 w-4" />
-            <span>{filteredCatalogs.length} curated files available</span>
+            <span>{filteredAllFeatured.length} curated files available</span>
           </div>
         </div>
-        {filteredCatalogs.length === 0 ? (
+        {filteredAllFeatured.length === 0 ? (
           <div className="mt-10 rounded-lg border border-dashed border-border/70 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
             No live catalogs yet. Once you add catalogs in the dashboard, they will appear here.
           </div>
         ) : (
           <div className="mt-10 grid gap-8 lg:grid-cols-2">
-            {filteredCatalogs.map((catalog) => (
+            {filteredAllFeatured.map((catalog) => (
               <Card key={catalog.title} className="border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                 <CardHeader className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -381,6 +569,11 @@ const Catalogs = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
+                  {"pdfUrl" in catalog && (catalog as any).pdfUrl && (
+                    <div>
+                      <PdfThumb url={(catalog as any).pdfUrl} alt={catalog.title} />
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {catalog.formats.map((format) => (
                       <Badge key={format} variant="secondary" className="rounded-full border border-dashed border-border/70">
@@ -396,32 +589,83 @@ const Catalogs = () => {
                 </CardContent>
                 <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-6 py-4">
                   <span className="text-xs uppercase tracking-wide text-muted-foreground">Includes lookbook + price sheet</span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadCatalogCSV(catalog.title, (catalog as any).items)}
-                      disabled={!(catalog as any).items?.length}
-                      title={(catalog as any).items?.length ? "Download CSV" : "Available on live catalogs"}
-                    >
-                      <FileDown className="mr-2 h-4 w-4" /> CSV
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openCatalogPrintView(catalog.title, (catalog as any).items)}
-                      disabled={!(catalog as any).items?.length}
-                      title={(catalog as any).items?.length ? "Download PDF" : "Available on live catalogs"}
-                    >
-                      <ArrowUpRight className="mr-2 h-4 w-4" /> PDF
-                    </Button>
-                  </div>
+                  {"pdfUrl" in catalog && catalog.pdfUrl ? (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setActivePdf({ title: catalog.title, url: (catalog as any).pdfUrl });
+                          setPdfOpen(true);
+                        }}
+                      >
+                        View
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <a href={(catalog as any).pdfUrl} download>
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadCatalogCSV(catalog.title, (catalog as any).items)}
+                        disabled={!(catalog as any).items?.length}
+                        title={(catalog as any).items?.length ? "Download CSV" : "Available on live catalogs"}
+                      >
+                        <FileDown className="mr-2 h-4 w-4" /> CSV
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openCatalogPrintView(catalog.title, (catalog as any).items)}
+                        disabled={!(catalog as any).items?.length}
+                        title={(catalog as any).items?.length ? "Download PDF" : "Available on live catalogs"}
+                      >
+                        <ArrowUpRight className="mr-2 h-4 w-4" /> PDF
+                      </Button>
+                    </div>
+                  )}
                 </CardFooter>
               </Card>
             ))}
           </div>
         )}
       </section>
+
+      {/* Dialog mounted once for all previews */}
+      <Dialog open={pdfOpen} onOpenChange={setPdfOpen}>
+        <DialogContent className="p-0 overflow-hidden w-[96vw] max-w-[1200px] h-[92vh] max-h-[92vh] grid grid-rows-[auto,1fr] gap-0">
+          <DialogHeader className="flex flex-row items-center justify-between px-4 py-2 border-b text-left">
+            <DialogTitle className="text-base">
+              {activePdf?.title}
+            </DialogTitle>
+            {activePdf && (
+              <a
+                href={activePdf.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-muted-foreground hover:underline"
+              >
+                Open in new tab
+              </a>
+            )}
+          </DialogHeader>
+          <div className="h-full min-h-0 w-full">
+            {activePdf && (
+              <iframe
+                src={activePdf.url}
+                title={activePdf.title}
+                className="block h-full w-full"
+                loading="eager"
+                style={{ border: 0 }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <section className="bg-secondary/40 py-16">
         <div className="container mx-auto px-4">
