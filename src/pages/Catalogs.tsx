@@ -30,7 +30,6 @@ import * as pdfjsLib from "pdfjs-dist";
 // Configure PDF.js worker once per bundle
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-import PerkProgressBar from "@/components/fomo/PerkProgressBar";
 
 type CatalogCategory = "all" | "sarees" | "kurtis" | "fusion" | "menswear";
 
@@ -62,6 +61,21 @@ const faqItems = [
 
 const Catalogs = () => {
   const thumbCache = useRef(new Map<string, string>()).current;
+
+  // Prefer pre-shot catalog cover images over rendering the first PDF page
+  const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", {
+    eager: true,
+    as: "url",
+  }) as Record<string, string>;
+
+  const normalizeKey = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/\.[a-z0-9]+$/, "")
+      .replace(/\s*\(\d+\)\s*/g, " ")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
 
   function PdfThumb({ url, alt }: { url: string; alt: string }) {
     const [thumb, setThumb] = useState<string | null>(null);
@@ -140,7 +154,7 @@ const Catalogs = () => {
       </div>
     );
   }
-  // Static PDF catalogs imported from assets (built-time glob)
+  // Static PDF catalogs imported from assets (build-time glob)
   const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
   const staticPdfs = useMemo(() => {
     const humanize = (file: string) =>
@@ -151,10 +165,30 @@ const Catalogs = () => {
         .replace(/\s+/g, " ")
         .replace(/\s*\(\d+\)\s*/g, " ")
         .trim();
+    const imageByKey = new Map<string, string>();
+    Object.entries(imageModules).forEach(([imgPath, imgUrl]) => {
+      imageByKey.set(normalizeKey(imgPath), imgUrl);
+    });
     return Object.entries(pdfModules)
-      .map(([path, url]) => ({ title: humanize(path), url }))
+      .map(([path, url]) => {
+        const key = normalizeKey(path);
+        const image = imageByKey.get(key);
+        return { title: humanize(path), url, image } as { title: string; url: string; image?: string };
+      })
       .sort((a, b) => a.title.localeCompare(b.title));
   }, []);
+
+  // A thumb component that uses a catalog image if present, otherwise falls back to a PDF render
+  function CatalogThumb({ url, alt, image }: { url: string; alt: string; image?: string }) {
+    if (image) {
+      return (
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
+          <img src={image} alt={alt} className="h-full w-full object-cover" />
+        </div>
+      );
+    }
+    return <PdfThumb url={url} alt={alt} />;
+  }
 
   // Lightweight viewer state
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -176,6 +210,33 @@ const Catalogs = () => {
     const id = setTimeout(() => setDebouncedQuery(query.trim()), 250);
     return () => clearTimeout(id);
   }, [query]);
+
+  // Auto-open PDF preview if `pdf` query param is present
+  useEffect(() => {
+    const previewParam = searchParams.get("pdf");
+    if (!previewParam) return;
+    let decoded: string | null = null;
+    try {
+      decoded = decodeURIComponent(previewParam);
+    } catch {
+      decoded = previewParam;
+    }
+
+    // Try match by URL first, then by title
+    const byUrl = staticPdfs.find((p) => p.url === decoded);
+    if (byUrl) {
+      setActivePdf(byUrl);
+      setPdfOpen(true);
+      return;
+    }
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "").trim();
+    const byTitle = staticPdfs.find((p) => normalize(p.title) === normalize(decoded!));
+    if (byTitle) {
+      setActivePdf(byTitle);
+      setPdfOpen(true);
+    }
+  }, [searchParams, staticPdfs]);
 
   // Sync URL when filters change (great UX + shareable URLs)
   useEffect(() => {
@@ -239,6 +300,7 @@ const Catalogs = () => {
     formats: string[];
     items?: Array<unknown>;
     pdfUrl?: string;
+    imageUrl?: string;
   };
   const staticFeaturedCatalogs: FeaturedLike[] = useMemo(() => {
     const nowLabel = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -251,6 +313,7 @@ const Catalogs = () => {
       formats: ["PDF"],
       items: [],
       pdfUrl: p.url,
+      imageUrl: (p as any).image as string | undefined,
     }));
   }, [staticPdfs]);
 
@@ -501,14 +564,14 @@ const Catalogs = () => {
               <span className="text-sm text-muted-foreground">New saree catalogs</span>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredStaticPdfs.map((pdf) => (
+              {filteredStaticPdfs.map((pdf: { title: string; url: string; image?: string }) => (
                 <Card key={pdf.url} className="group border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                   <CardHeader className="space-y-2">
                     <CardTitle className="line-clamp-2 text-base leading-snug">{pdf.title}</CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">Catalog · PDF</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <PdfThumb url={pdf.url} alt={pdf.title} />
+                    <CatalogThumb url={pdf.url} alt={pdf.title} image={pdf.image} />
                   </CardContent>
                   <CardFooter className="flex items-center justify-between gap-2 border-t bg-muted/30 px-6 py-4">
                     <Button
@@ -571,7 +634,13 @@ const Catalogs = () => {
                 <CardContent className="space-y-4 text-sm">
                   {"pdfUrl" in catalog && (catalog as any).pdfUrl && (
                     <div>
-                      <PdfThumb url={(catalog as any).pdfUrl} alt={catalog.title} />
+                      {"imageUrl" in catalog && (catalog as any).imageUrl ? (
+                        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
+                          <img src={(catalog as any).imageUrl} alt={catalog.title} className="h-full w-full object-cover" />
+                        </div>
+                      ) : (
+                        <PdfThumb url={(catalog as any).pdfUrl} alt={catalog.title} />
+                      )}
                     </div>
                   )}
                   <div className="flex flex-wrap gap-2">
@@ -636,7 +705,17 @@ const Catalogs = () => {
       </section>
 
       {/* Dialog mounted once for all previews */}
-      <Dialog open={pdfOpen} onOpenChange={setPdfOpen}>
+      <Dialog
+        open={pdfOpen}
+        onOpenChange={(open) => {
+          setPdfOpen(open);
+          if (!open) {
+            const next = new URLSearchParams(searchParams);
+            next.delete("pdf");
+            setSearchParams(next, { replace: true });
+          }
+        }}
+      >
         <DialogContent className="p-0 overflow-hidden w-[96vw] max-w-[1200px] h-[92vh] max-h-[92vh] grid grid-rows-[auto,1fr] gap-0">
           <DialogHeader className="flex flex-row items-center justify-between px-4 py-2 border-b text-left">
             <DialogTitle className="text-base">
@@ -769,10 +848,6 @@ const Catalogs = () => {
             </Accordion>
           </div>
         </div>
-      </section>
-
-      <section className="container mx-auto px-4 py-10 space-y-4">
-        <PerkProgressBar />
       </section>
 
       <section className="relative overflow-hidden">

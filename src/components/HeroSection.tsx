@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Shield, Truck, Award, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import videoOne from "@/assets/ProductVideos/meghdoot1.mp4";
 import videoTwo from "@/assets/ProductVideos/Meghdoot2.mp4";
 import videoThree from "@/assets/ProductVideos/meghdoot3.mp4";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
 
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
@@ -83,6 +85,7 @@ const HeroSection = () => {
               <Button
                 size="lg"
                 className="bg-accent text-accent-foreground hover:bg-accent/90 text-lg px-8 py-6 animate-glow"
+                onClick={() => navigate('/register')}
               >
                 Create Trade Account
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -91,6 +94,7 @@ const HeroSection = () => {
                 size="lg"
                 variant="outline"
                 className="bg-background/20 text-primary-foreground border-primary-foreground/30 hover:bg-background/30 text-lg px-8 py-6 backdrop-blur-sm"
+                onClick={() => navigate('/catalogs')}
               >
                 Browse Catalogs
               </Button>

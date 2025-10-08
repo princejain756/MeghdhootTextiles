@@ -26,6 +26,7 @@ import FAQs from "./pages/FAQs";
 import Contact from "./pages/Contact";
 import ProtectedRoute from "@/components/routing/ProtectedRoute";
 import { AuthProvider } from "@/context/AuthContext";
+import { CartProvider } from "@/context/CartContext";
 import SupportChatWidget from "@/components/chat/SupportChatWidget";
 
 const queryClient = new QueryClient({
@@ -42,8 +43,9 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
+        <CartProvider>
+          <Toaster />
+          <Sonner />
         <BrowserRouter future={{ v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -86,6 +88,7 @@ const App = () => (
         </BrowserRouter>
         {/* Global support chat widget */}
         <SupportChatWidget />
+        </CartProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

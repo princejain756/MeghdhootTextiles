@@ -84,3 +84,30 @@ export const upsertDelivery = asyncHandler(async (req: Request, res: Response) =
 
   res.json({ success: true, delivery: updated });
 });
+
+export const createGuestOrder = asyncHandler(async (req: Request, res: Response) => {
+  const orderData = req.body as {
+    customerDetails: {
+      customerName: string;
+      phone: string;
+      businessName: string;
+      gst?: string;
+      email?: string;
+      isGuestOrder: boolean;
+    };
+    items: Array<{
+      id: string;
+      name: string;
+      price: number;
+      quantity: number;
+      moq?: number;
+      note?: string;
+    }>;
+    subtotal: number;
+    totalItems: number;
+  };
+
+  const guestOrder = await OrderService.createGuestOrder(orderData);
+
+  res.status(201).json({ success: true, order: guestOrder });
+});

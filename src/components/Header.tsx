@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import logomegh from "@/assets/logomegh.png";
 
 const headerLinks = [
@@ -39,8 +40,8 @@ const headerLinks = [
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { state, setIsOpen: setCartOpen } = useCart();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const desktopSearchRef = useRef<HTMLInputElement | null>(null);
@@ -153,11 +154,13 @@ const Header = () => {
               <span className="pointer-events-none absolute right-2 select-none rounded-md border bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">⌘K</span>
             </form>
 
-            <Button variant="ghost" size="sm" className="relative" onClick={() => setIsCartOpen(true)}>
+                        <Button variant="ghost" size="sm" className="relative" onClick={() => setCartOpen(true)}>
               <ShoppingCart className="h-5 w-5" />
-              <Badge className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-accent p-0 text-xs text-accent-foreground">
-                0
-              </Badge>
+              {state.items.length > 0 && (
+                <Badge variant="secondary" className="absolute -right-2 -top-2 h-5 min-w-5 rounded-full px-1 text-xs">
+                  {state.items.reduce((total, item) => total + item.quantity, 0)}
+                </Badge>
+              )}
             </Button>
 
             {user ? (
@@ -278,7 +281,7 @@ const Header = () => {
         </div>
       </div>
     </header>
-    <CartDrawer open={isCartOpen} onOpenChange={setIsCartOpen} />
+    <CartDrawer open={state.isOpen} onOpenChange={setCartOpen} />
     </>
   );
 };

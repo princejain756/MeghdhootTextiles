@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { authenticate, requireRole } from "../middleware/auth";
 import { validate } from "../utils/validate";
-import { createOrder, listOrders, getOrder, updateOrderStatus, upsertDelivery } from "../controllers/order.controller";
+import { createOrder, listOrders, getOrder, updateOrderStatus, upsertDelivery, createGuestOrder } from "../controllers/order.controller";
 import { OrderStatus, Role } from "@prisma/client";
 
 const router = Router();
@@ -26,6 +26,27 @@ const deliverySchema = z.object({
   instructions: z.string().optional(),
 });
 
+const guestOrderSchema = z.object({
+  customerDetails: z.object({
+    customerName: z.string().min(2),
+    phone: z.string().min(10),
+    businessName: z.string().min(2),
+    gst: z.string().optional(),
+    email: z.string().email().optional(),
+    isGuestOrder: z.boolean(),
+  }),
+  items: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    price: z.number(),
+    quantity: z.number(),
+    moq: z.number().optional(),
+    note: z.string().optional(),
+  })).min(1),
+  subtotal: z.number(),
+  totalItems: z.number(),
+});
+
 router.post(
   "/",
   authenticate,
@@ -38,6 +59,16 @@ router.post(
     })
   ),
   createOrder
+);
+
+router.post(
+  "/guest",
+  validate(
+    z.object({
+      body: guestOrderSchema,
+    })
+  ),
+  createGuestOrder
 );
 
 router.get("/", authenticate, listOrders);

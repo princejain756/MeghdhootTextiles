@@ -226,4 +226,42 @@ export const OrderService = {
 
     return updated;
   },
+
+  async createGuestOrder(orderData: {
+    customerDetails: {
+      customerName: string;
+      phone: string;
+      businessName: string;
+      gst?: string;
+      email?: string;
+      isGuestOrder: boolean;
+    };
+    items: Array<{
+      id: string;
+      name: string;
+      price: number;
+      quantity: number;
+      moq?: number;
+      note?: string;
+    }>;
+    subtotal: number;
+    totalItems: number;
+  }) {
+    // Store guest order using the new schema with proper types
+    const guestOrder = await prisma.guestOrder.create({
+      data: {
+        customerName: orderData.customerDetails.customerName,
+        phone: orderData.customerDetails.phone,
+        businessName: orderData.customerDetails.businessName,
+        gst: orderData.customerDetails.gst,
+        email: orderData.customerDetails.email,
+        status: OrderStatus.PENDING,
+        items: orderData.items, // JSON field will handle this automatically
+        subtotal: new Prisma.Decimal(orderData.subtotal),
+        totalItems: orderData.totalItems,
+      },
+    });
+
+    return guestOrder;
+  },
 };
