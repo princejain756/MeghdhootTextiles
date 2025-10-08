@@ -38,7 +38,7 @@ const PhoneShowcase = () => {
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
             Watch our premium ethnic wear in action. See the quality, feel the elegance, 
-            and discover why retailers choose MeghDoot Textiles.
+            and discover why retailers choose Meghdoot Textiles.
           </p>
         </div>
 

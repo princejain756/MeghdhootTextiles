@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       queryClient.setQueryData(["auth", "me"], { success: true, user });
       toast({
         title: "Account created",
-        description: "You're ready to explore MeghDoot Trade Hub",
+        description: "You're ready to explore Meghdoot Trade Hub",
       });
     },
     onError: (error) => {

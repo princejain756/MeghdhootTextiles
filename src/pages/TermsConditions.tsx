@@ -33,7 +33,7 @@ const TermsConditions = () => {
       id: "acceptance",
       title: "Acceptance of Terms",
       icon: <CheckCircle className="h-5 w-5" />,
-      content: `By accessing and using the MeghDoot Textiles website and services, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+      content: `By accessing and using the Meghdoot Textiles website and services, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
 
       These Terms and Conditions ("Terms") govern your use of our website, products, and services. Your continued use of our services constitutes acceptance of these terms.`
     },
@@ -41,7 +41,7 @@ const TermsConditions = () => {
       id: "definitions",
       title: "Definitions",
       icon: <Info className="h-5 w-5" />,
-      content: `**Company:** MeghDoot Textiles Private Limited, a company incorporated under the Companies Act, 2013.
+      content: `**Company:** Meghdoot Textiles Private Limited, a company incorporated under the Companies Act, 2013.
 
       **Services:** All products, services, and content provided through our website and business operations.
 
@@ -186,7 +186,7 @@ const TermsConditions = () => {
       title: "Intellectual Property",
       icon: <Lock className="h-5 w-5" />,
       content: `**Ownership:**
-      - All content on our website is owned by MeghDoot Textiles
+      - All content on our website is owned by Meghdoot Textiles
       - This includes text, images, logos, and design elements
       - Our products and designs are protected by intellectual property laws
       - Unauthorized use is strictly prohibited
@@ -198,7 +198,7 @@ const TermsConditions = () => {
       - You are responsible for ensuring you have rights to submitted content
 
       **Trademarks:**
-      - "MeghDoot Textiles" and related marks are our trademarks
+      - "Meghdoot Textiles" and related marks are our trademarks
       - Use of our trademarks without permission is prohibited
       - Other trademarks belong to their respective owners`
     },

@@ -150,7 +150,7 @@ const Shop = () => {
                 <Sparkles className="mr-2 h-3.5 w-3.5" /> Curated wholesale marketplace
               </Badge>
               <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-                Shop MeghDoot collections with confidence and creative control
+                Shop Meghdoot collections with confidence and creative control
               </h1>
               <p className="text-lg text-primary-foreground/85 md:text-xl">
                 Layered lookbooks, transparent pricing and premium support for retailers, resellers and boutique founders who expect more from their suppliers.
@@ -403,7 +403,7 @@ const Shop = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-xl space-y-3">
-              <h2 className="text-section-title">Stay ahead with the MeghDoot knowledge desk</h2>
+              <h2 className="text-section-title">Stay ahead with the Meghdoot knowledge desk</h2>
               <p className="text-base text-muted-foreground">
                 Tap into insider intel on fabrics, demand signals and launch playbooks built for fast-moving wholesale teams.
               </p>
@@ -440,7 +440,7 @@ const Shop = () => {
                 Partnership-first wholesale
               </Badge>
               <h2 className="text-3xl font-semibold leading-tight md:text-4xl">
-                Build a future-proof inventory pipeline with MeghDoot Trade Hub
+                Build a future-proof inventory pipeline with Meghdoot Trade Hub
               </h2>
               <p className="text-base text-primary-foreground/80">
                 Secure priority access to fresh drops, flexible payment windows and data-backed insights that help you scale responsibly.

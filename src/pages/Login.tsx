@@ -63,10 +63,10 @@ const Login = () => {
       <div className="container flex flex-col-reverse gap-12 py-16 lg:flex-row lg:items-center">
         <div className="flex-1 space-y-6">
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Welcome back to <span className="text-primary">MeghDoot Trade Hub</span>
+            Welcome back to <span className="text-primary">Meghdoot Trade Hub</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-lg">
-            Manage your wholesale orders, track deliveries, and stay connected with the MeghDoot team.
+            Manage your wholesale orders, track deliveries, and stay connected with the Meghdoot team.
             Log in to continue your journey with us.
           </p>
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -124,7 +124,7 @@ const Login = () => {
               </Form>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                New to MeghDoot? {""}
+                New to Meghdoot? {""}
                 <Link to="/register" className="font-medium text-primary hover:underline">
                   Create your trade account
                 </Link>

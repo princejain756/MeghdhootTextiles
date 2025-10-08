@@ -32,7 +32,7 @@ const RefundPolicy = () => {
       id: "overview",
       title: "Refund Policy Overview",
       icon: <Info className="h-5 w-5" />,
-      content: `At MeghDoot Textiles, we strive to ensure your complete satisfaction with every purchase. This Refund Policy outlines the terms and conditions under which refunds, exchanges, and returns are processed.
+      content: `At Meghdoot Textiles, we strive to ensure your complete satisfaction with every purchase. This Refund Policy outlines the terms and conditions under which refunds, exchanges, and returns are processed.
 
       We understand that sometimes products may not meet your expectations, and we are committed to resolving any issues promptly and fairly. Please read this policy carefully before making a purchase.`
     },

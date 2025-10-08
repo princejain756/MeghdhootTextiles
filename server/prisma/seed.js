@@ -23,7 +23,7 @@ async function main() {
             email: ADMIN_EMAIL,
             passwordHash,
             role: Role.ADMIN,
-            fullName: "MeghDoot Admin",
+            fullName: "Meghdoot Admin",
         },
     });
     console.log("Admin user created with username 'admin'.");

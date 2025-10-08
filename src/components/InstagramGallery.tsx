@@ -109,7 +109,7 @@ const InstagramGallery = () => {
               href="https://www.instagram.com/meghdoottextiles/"
               target="_blank"
               rel="noreferrer"
-              aria-label="Open MeghDoot Textiles Instagram in a new tab"
+              aria-label="Open Meghdoot Textiles Instagram in a new tab"
             >
               View more on Instagram
             </a>

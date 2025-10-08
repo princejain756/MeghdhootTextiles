@@ -69,8 +69,8 @@ const FAQs = () => {
   const faqData = {
     general: [
       {
-        question: "What is MeghDoot Textiles?",
-        answer: "MeghDoot Textiles is a leading wholesale supplier of Indian ethnic wear, serving retailers, boutiques, and resellers across India. We specialize in sarees, kurtis, lehengas, and other traditional garments with over 25 years of experience in the textile industry."
+        question: "What is Meghdoot Textiles?",
+        answer: "Meghdoot Textiles is a leading wholesale supplier of Indian ethnic wear, serving retailers, boutiques, and resellers across India. We specialize in sarees, kurtis, lehengas, and other traditional garments with over 25 years of experience in the textile industry."
       },
       {
         question: "Do you have a physical store?",

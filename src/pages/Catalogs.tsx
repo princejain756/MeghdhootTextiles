@@ -346,7 +346,7 @@ const Catalogs = () => {
       </head>
       <body>
         <section class="cover page-break">
-          <img src="${logomegh}" alt="MeghDoot" style="height:64px" />
+          <img src="${logomegh}" alt="Meghdoot" style="height:64px" />
           <h1>${escapeHtml(title)}</h1>
           <p>Generated ${new Date().toLocaleString()}</p>
           <div style="display:flex; gap:16px; margin-top:12px; font-size:14px; color:#fde68a">
@@ -358,9 +358,9 @@ const Catalogs = () => {
         </section>
 
         <div class="brand">
-          <img src="${logomegh}" alt="MeghDoot" />
+          <img src="${logomegh}" alt="Meghdoot" />
           <div>
-            <div style="font-weight:600">MeghDoot Trade Hub</div>
+            <div style="font-weight:600">Meghdoot Trade Hub</div>
             <div class="meta">Product list</div>
           </div>
         </div>
@@ -399,7 +399,7 @@ const Catalogs = () => {
         <div className="relative container mx-auto px-4 py-24">
           <div className="max-w-3xl space-y-6">
             <Badge variant="secondary" className="bg-background/15 text-primary-foreground">
-              <Library className="mr-2 h-3.5 w-3.5" /> MeghDoot catalog library
+              <Library className="mr-2 h-3.5 w-3.5" /> Meghdoot catalog library
             </Badge>
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
               Download richly-detailed catalogs backed by merchandising intelligence
@@ -788,7 +788,7 @@ const Catalogs = () => {
                 Never miss a new catalog release or price revision
               </h2>
               <p className="text-base text-primary-foreground/80">
-                Join the MeghDoot alert list to be notified the moment fresh catalogs go live. Select your categories and dispatch preferences.
+                Join the Meghdoot alert list to be notified the moment fresh catalogs go live. Select your categories and dispatch preferences.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">

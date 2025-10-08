@@ -12,7 +12,7 @@ export default function SupportChatWidget() {
     const whatsapp = import.meta.env.VITE_SUPPORT_WHATSAPP_NUMBER ?? "+919342503401"; // E.164 without spaces
     const phone = import.meta.env.VITE_SUPPORT_PHONE ?? "+919342503401";
     const email = import.meta.env.VITE_SUPPORT_EMAIL ?? "support@meghdoottextiles.com";
-    const brand = import.meta.env.VITE_BRAND_NAME ?? "MeghDoot Textiles";
+    const brand = import.meta.env.VITE_BRAND_NAME ?? "Meghdoot Textiles";
     const presetMsg = encodeURIComponent(`Hello ${brand} team! I have a question about wholesale.`);
     return {
       whatsappUrl: `https://wa.me/${whatsapp.replace(/[^\d]/g, "")}?text=${presetMsg}`,

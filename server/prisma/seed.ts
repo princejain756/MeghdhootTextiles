@@ -30,7 +30,7 @@ async function main() {
       email: ADMIN_EMAIL,
       passwordHash,
       role: Role.ADMIN,
-      fullName: "MeghDoot Admin",
+      fullName: "Meghdoot Admin",
     },
   });
 

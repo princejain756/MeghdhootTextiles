@@ -29,7 +29,7 @@ const PrivacyPolicy = () => {
       id: "introduction",
       title: "Introduction",
       icon: <Info className="h-5 w-5" />,
-      content: `MeghDoot Textiles Private Limited ("we," "our," or "us") is committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website, use our services, or interact with us.
+      content: `Meghdoot Textiles Private Limited ("we," "our," or "us") is committed to protecting your privacy and personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website, use our services, or interact with us.
 
       By using our services, you agree to the collection and use of information in accordance with this policy. If you do not agree with the terms of this Privacy Policy, please do not access our website or use our services.`
     },

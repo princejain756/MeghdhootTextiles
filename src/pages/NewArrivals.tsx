@@ -112,7 +112,7 @@ const NewArrivals = () => {
         <div className="relative container mx-auto px-4 py-24">
           <div className="max-w-3xl space-y-6">
             <Badge variant="secondary" className="bg-background/15 text-primary-foreground">
-              <Sparkles className="mr-2 h-3.5 w-3.5" /> MeghDoot Launchpad
+              <Sparkles className="mr-2 h-3.5 w-3.5" /> Meghdoot Launchpad
             </Badge>
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
               Fresh arrivals dropped weekly with rich storytelling built-in
@@ -352,7 +352,7 @@ const NewArrivals = () => {
                 Launch concierge
               </Badge>
               <h2 className="text-3xl font-semibold leading-tight md:text-4xl">
-                Ready to headline the next MeghDoot drop?
+                Ready to headline the next Meghdoot drop?
               </h2>
               <p className="text-base text-primary-foreground/80">
                 Tell us about your customer, price window and style direction. We will tailor your allocation and marketing kit instantly.

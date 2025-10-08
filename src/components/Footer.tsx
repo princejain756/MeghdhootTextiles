@@ -50,7 +50,7 @@ const Footer = () => {
               <div className="mb-4">
                 <img 
                   src={logomegh} 
-                  alt="MeghDoot Textiles" 
+                  alt="Meghdoot Textiles" 
                   className="h-16 w-auto object-contain"
                 />
               </div>

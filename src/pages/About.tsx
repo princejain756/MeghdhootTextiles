@@ -25,7 +25,7 @@ const timeline = [
   {
     year: "1998",
     title: "Founded in Bangalore",
-    description: "MeghDoot textiles starts as a boutique saree studio focused on handcrafted bridal wear for local retailers.",
+    description: "Meghdoot textiles starts as a boutique saree studio focused on handcrafted bridal wear for local retailers.",
   },
   {
     year: "2008",
@@ -39,7 +39,7 @@ const timeline = [
   },
   {
     year: "2024",
-    title: "MeghDoot Trade Hub",
+    title: "Meghdoot Trade Hub",
     description: "Unified wholesale platform blending merchandising intelligence, fast logistics and launch-ready marketing support.",
   },
 ];
@@ -103,7 +103,7 @@ const About = () => {
         <div className="relative container mx-auto px-4 py-24">
           <div className="max-w-3xl space-y-6">
             <Badge variant="secondary" className="bg-background/15 text-primary-foreground">
-              <Sparkles className="mr-2 h-3.5 w-3.5" /> About MeghDoot
+              <Sparkles className="mr-2 h-3.5 w-3.5" /> About Meghdoot
             </Badge>
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
               Heritage craftsmanship meets modern wholesale intelligence
@@ -132,7 +132,7 @@ const About = () => {
           <div className="space-y-6">
             <h2 className="text-section-title">Our evolution</h2>
             <p className="text-base text-muted-foreground">
-              MeghDoot has grown from a family-run design studio to a nationwide wholesale partner. Yet our obsession with detail, respectful sourcing and curated storytelling remains unchanged.
+              Meghdoot has grown from a family-run design studio to a nationwide wholesale partner. Yet our obsession with detail, respectful sourcing and curated storytelling remains unchanged.
             </p>
             <div className="relative space-y-8 border-l border-dashed border-border pl-6">
               {timeline.map((item) => (
@@ -178,12 +178,12 @@ const About = () => {
             <div className="space-y-3">
               <h2 className="text-section-title">Board of Directors</h2>
               <p className="text-base text-muted-foreground">
-                Current board of directors (as of Sep 21, 2025) leading MeghDoot Textiles with decades of experience in the textile industry.
+                Current board of directors (as of Sep 21, 2025) leading Meghdoot Textiles with decades of experience in the textile industry.
               </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" />
-              <span>100+ people powering MeghDoot</span>
+              <span>100+ people powering Meghdoot</span>
             </div>
           </div>
           <div className="mt-10 grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
@@ -279,7 +279,7 @@ const About = () => {
               </Badge>
               <CardTitle className="text-xl">Empowering artisans and boutiques</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                MeghDoot invests in workshops, digital training and credit assistance for partners to adopt new-age selling tools.
+                Meghdoot invests in workshops, digital training and credit assistance for partners to adopt new-age selling tools.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-muted-foreground">
@@ -298,7 +298,7 @@ const About = () => {
               </Badge>
               <CardTitle className="text-2xl">Co-create the future of Indian ethnic retail</CardTitle>
               <CardDescription className="text-sm text-primary-foreground/80">
-                Partner with MeghDoot to unlock thoughtful collections, data-backed decisions and elevated customer experiences.
+                Partner with Meghdoot to unlock thoughtful collections, data-backed decisions and elevated customer experiences.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

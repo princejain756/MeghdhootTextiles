@@ -57,7 +57,7 @@ const WhySection = () => {
         {/* Section header */}
         <div className="text-center mb-16">
           <h2 className="text-section-title text-primary mb-4">
-            Why Choose MeghDoot Textiles?
+            Why Choose Meghdoot Textiles?
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             We understand the challenges of retail business. Our wholesale platform 

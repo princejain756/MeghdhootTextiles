@@ -34,7 +34,7 @@ const ShippingPolicy = () => {
       id: "overview",
       title: "Shipping Policy Overview",
       icon: <Info className="h-5 w-5" />,
-      content: `At MeghDoot Textiles, we are committed to delivering your orders safely and on time. This Shipping Policy outlines our delivery processes, timelines, and terms to ensure a smooth shopping experience.
+      content: `At Meghdoot Textiles, we are committed to delivering your orders safely and on time. This Shipping Policy outlines our delivery processes, timelines, and terms to ensure a smooth shopping experience.
 
       We partner with reliable shipping carriers to ensure your orders reach you in perfect condition. Our team carefully packages each item to protect it during transit.`
     },

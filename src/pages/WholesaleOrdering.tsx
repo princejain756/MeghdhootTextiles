@@ -59,7 +59,7 @@ const processSteps = [
 const serviceTiers = [
   {
     name: "Starter",
-    description: "Ideal for new retailers testing MeghDoot assortments.",
+    description: "Ideal for new retailers testing Meghdoot assortments.",
     features: ["MOQ from 6", "Standard dispatch 5 days", "Catalog access"],
     price: "₹25,000 min buy-in",
   },
@@ -110,7 +110,7 @@ const WholesaleOrdering = () => {
         <div className="relative container mx-auto px-4 py-24">
           <div className="max-w-3xl space-y-6">
             <Badge variant="secondary" className="bg-background/15 text-primary-foreground">
-              <Handshake className="mr-2 h-3.5 w-3.5" /> MeghDoot wholesale program
+              <Handshake className="mr-2 h-3.5 w-3.5" /> Meghdoot wholesale program
             </Badge>
             <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
               Seamless wholesale ordering designed for modern retailers
@@ -192,7 +192,7 @@ const WholesaleOrdering = () => {
             <div className="space-y-3">
               <h2 className="text-section-title">Choose the partnership tier that fits your ambition</h2>
               <p className="text-base text-muted-foreground">
-                Transparent, value-driven tiers whether you are discovering MeghDoot or running a nationwide retail operation.
+                Transparent, value-driven tiers whether you are discovering Meghdoot or running a nationwide retail operation.
               </p>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -333,7 +333,7 @@ const WholesaleOrdering = () => {
                 Always-on support
               </Badge>
               <h2 className="text-3xl font-semibold leading-tight md:text-4xl">
-                Partner with MeghDoot Trade Hub for predictable, premium wholesale ordering
+                Partner with Meghdoot Trade Hub for predictable, premium wholesale ordering
               </h2>
               <p className="text-base text-primary-foreground/80">
                 Our team works as an extension of your merchandising unit—forecasting demand, aligning creative assets and ensuring inventory flows effortlessly.

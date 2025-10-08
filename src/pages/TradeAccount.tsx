@@ -112,7 +112,7 @@ const TradeAccount = () => {
                 Create Your Trade Account
               </h1>
               <p className="text-xl text-primary-foreground/90 mb-8">
-                Join thousands of retailers, boutiques, and resellers who trust MeghDoot Textiles for their wholesale ethnic wear needs
+                Join thousands of retailers, boutiques, and resellers who trust Meghdoot Textiles for their wholesale ethnic wear needs
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Badge variant="secondary" className="bg-white/20 text-white px-4 py-2">

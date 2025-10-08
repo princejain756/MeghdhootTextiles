@@ -169,7 +169,7 @@ const Dashboard = () => {
           {latestResponse && (
             <div className="rounded-md border bg-muted/30 p-3">
               <p className="font-medium text-foreground text-sm">
-                {latestResponse.authorRole === "ADMIN" ? "MeghDoot Team" : "You"}
+                {latestResponse.authorRole === "ADMIN" ? "Meghdoot Team" : "You"}
               </p>
               <p>{latestResponse.message}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -190,7 +190,7 @@ const Dashboard = () => {
             <p className="text-sm uppercase tracking-widest text-primary">Welcome back</p>
             <h1 className="text-3xl font-bold sm:text-4xl">Hi {user.fullName ?? user.username}, here's your trade hub.</h1>
             <p className="text-muted-foreground">
-              Track orders, monitor fulfilment, and stay in sync with the MeghDoot team.
+              Track orders, monitor fulfilment, and stay in sync with the Meghdoot team.
             </p>
           </div>
           <Dialog open={supportDialogOpen} onOpenChange={setSupportDialogOpen}>

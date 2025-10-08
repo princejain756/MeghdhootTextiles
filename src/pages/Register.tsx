@@ -92,7 +92,7 @@ const Register = () => {
             Unlock premium catalog access & concierge fulfilment support
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl">
-            Create your MeghDoot Trade Hub account to manage wholesale orders, access curated collections,
+            Create your Meghdoot Trade Hub account to manage wholesale orders, access curated collections,
             and collaborate with our merchandising team in real-time.
           </p>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -150,7 +150,7 @@ const Register = () => {
                         <FormItem>
                           <FormLabel>Company</FormLabel>
                           <FormControl>
-                            <Input placeholder="MeghDoot Retail" {...field} />
+                            <Input placeholder="Meghdoot Retail" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
