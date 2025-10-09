@@ -3,6 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles } from "lucide-react";
 import catalogImage from "@/assets/catalog-showcase.jpg";
+import sareesImage from "@/assets/forsaree.jpeg";
+import salwarImage from "@/assets/salwarsuitsfor.webp";
 import { Link } from "react-router-dom";
 
 const CategoriesSection = () => {
@@ -12,33 +14,17 @@ const CategoriesSection = () => {
       description: "Premium silk, cotton, and designer sarees for every occasion",
       catalogCount: "150+ Catalogs",
       popular: true,
-      image: catalogImage,
-      gradient: "from-purple-500/20 to-pink-500/20"
+      image: sareesImage,
+      gradient: "from-purple-500/20 to-pink-500/20",
     },
     {
       name: "Salwar Suits",
       description: "Elegant suits and dress materials in latest designs",
-      catalogCount: "120+ Catalogs", 
+      catalogCount: "120+ Catalogs",
       popular: true,
-      image: catalogImage,
-      gradient: "from-blue-500/20 to-cyan-500/20"
+      image: salwarImage,
+      gradient: "from-blue-500/20 to-cyan-500/20",
     },
-    {
-      name: "Kurtis",
-      description: "Casual and formal kurtis in cotton, rayon, and silk",
-      catalogCount: "200+ Catalogs",
-      popular: false,
-      image: catalogImage,
-      gradient: "from-green-500/20 to-emerald-500/20"
-    },
-    {
-      name: "Lehengas",
-      description: "Bridal and party wear lehengas with intricate work",
-      catalogCount: "80+ Catalogs",
-      popular: false,
-      image: catalogImage,
-      gradient: "from-amber-500/20 to-orange-500/20"
-    }
   ];
 
   return (
@@ -57,7 +43,7 @@ const CategoriesSection = () => {
 
         {/* Categories grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          {categories.map((category, index) => (
+          {categories.map((category) => (
             <Card key={category.name} className="group overflow-hidden border-0 bg-gradient-card hover:shadow-strong transition-all duration-500 hover:-translate-y-1">
               <CardContent className="p-0">
                 <div className="relative h-64 overflow-hidden">
