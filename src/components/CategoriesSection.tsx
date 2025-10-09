@@ -2,7 +2,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles } from "lucide-react";
-import catalogImage from "@/assets/catalog-showcase.jpg";
 import sareesImage from "@/assets/forsaree.jpeg";
 import salwarImage from "@/assets/salwarsuitsfor.webp";
 import { Link } from "react-router-dom";
@@ -55,12 +54,12 @@ const CategoriesSection = () => {
           {categories.map((category) => (
             <Card key={category.name} className="group overflow-hidden border-0 bg-gradient-card hover:shadow-strong transition-all duration-500 hover:-translate-y-1">
               <CardContent className="p-0">
-                <div className="relative h-64 overflow-hidden">
+                <div className="relative h-72 md:h-80 overflow-hidden">
                   {/* Background image */}
                   <img
                     src={category.image}
                     alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover object-top group-hover:scale-110 transition-transform duration-700"
                   />
                   
                   {/* Gradient overlay */}
