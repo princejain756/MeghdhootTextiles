@@ -14,6 +14,73 @@ import {
   Truck
 } from "lucide-react";
 import logomegh from "@/assets/logomegh.png";
+import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+const OperationsLocations = () => {
+  const [open, setOpen] = useState(false);
+
+  const locations = [
+    {
+      name: "Surat Sales Store",
+      address:
+        "Kamela Darwaja, Umarwada, Ring Road, (Opp. Millennium Textile Market Back Gate), Surat – 395002, Gujarat, India",
+    },
+    {
+      name: "Bengaluru Sales Store",
+      address: "No.82, J M Road, Avenue Road cross, Bangalore - 560002",
+    },
+    {
+      name: "Kolkata Sales Store",
+      address:
+        "6th Floor, 95B, Park Street, Opp : Deputy Commissioner Office, Kolkata, West Bengal 700016",
+    },
+  ];
+
+  const mapsUrl = (addr: string) => `https://www.google.com/maps?q=${encodeURIComponent(addr)}`;
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-2 text-sm font-medium text-primary-foreground hover:text-accent transition-colors"
+        aria-expanded={open}
+        aria-controls="operations-locations"
+      >
+        Operations {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {open && (
+        <div
+          id="operations-locations"
+          className="rounded-md border border-primary-foreground/20 bg-background/10 p-3"
+        >
+          <ul className="space-y-2">
+            {locations.map((loc) => (
+              <li key={loc.name}>
+                <a
+                  href={mapsUrl(loc.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded px-2 py-2 hover:bg-background/20 transition-colors"
+                  title={`Open in Google Maps: ${loc.name}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 mt-0.5 text-accent shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium">{loc.name}</div>
+                      <div className="text-xs text-primary-foreground/80">{loc.address}</div>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Footer = () => {
   return (
@@ -78,17 +145,8 @@ const Footer = () => {
 
             {/* Contact info */}
             <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 mt-1 text-accent shrink-0" />
-                <div>
-                  <div className="font-medium mb-1">Surat Operations</div>
-                  <div className="text-sm text-primary-foreground/80">
-                    Kamela Darwaja, Umarwada, Ring Road<br />
-                    (Opp. Millennium Textile Market Back Gate)<br />
-                    Surat – 395002, Gujarat, India
-                  </div>
-                </div>
-              </div>
+              {/* Operations locations toggle */}
+              <OperationsLocations />
               <div className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-accent" />
                 <span className="font-medium">+91 93425 03401</span>
