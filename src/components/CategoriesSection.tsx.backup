@@ -16,7 +16,6 @@ const CategoriesSection = () => {
       popular: true,
       image: sareesImage,
       gradient: "from-purple-500/20 to-pink-500/20",
-      categoryParam: "sarees", // This matches the category filter in Catalogs.tsx
     },
     {
       name: "Salwar Suits",
@@ -25,7 +24,6 @@ const CategoriesSection = () => {
       popular: true,
       image: salwarImage,
       gradient: "from-blue-500/20 to-cyan-500/20",
-      categoryParam: "fusion", // Assuming salwar suits are under fusion category
     },
     {
       name: "Kurtis",
@@ -34,7 +32,6 @@ const CategoriesSection = () => {
       popular: false,
       image: kurtisImage,
       gradient: "from-green-500/20 to-emerald-500/20",
-      categoryParam: "kurtis",
     },
   ];
 
@@ -96,8 +93,8 @@ const CategoriesSection = () => {
                           className="bg-white/20 text-white border-white/30 hover:bg-white hover:text-primary backdrop-blur-sm transition-all duration-300 group-hover:translate-x-1"
                           variant="outline"
                         >
-                          {/* Fixed: Route to catalogs with category filter instead of search */}
-                          <Link to={`/catalogs?cat=${category.categoryParam}`}>
+                          {/* Route to catalogs with a pre-filled search for this category */}
+                          <Link to={`/catalogs?q=${encodeURIComponent(category.name)}`}>
                             Explore
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Link>

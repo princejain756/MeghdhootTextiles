@@ -23,6 +23,13 @@ import type { ApiCatalog } from "@/types/api";
 import logomegh from "@/assets/logomegh.png";
 import ProductGrid from "@/components/ProductGrid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// PDF thumbnails
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import * as pdfjsLib from "pdfjs-dist";
+
+// Configure PDF.js worker once per bundle
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type CatalogCategory = "all" | "sarees" | "kurtis" | "fusion" | "menswear";
 
@@ -53,48 +60,100 @@ const faqItems = [
 ];
 
 const Catalogs = () => {
+  const thumbCache = useRef(new Map<string, string>()).current;
+
   // Prefer pre-shot catalog cover images over rendering the first PDF page
   const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", {
     eager: true,
     as: "url",
   }) as Record<string, string>;
 
-  // Improved normalizeKey function to better match catalog names
-  const normalizeKey = (value: string) => {
-    return value
+  const normalizeKey = (value: string) =>
+    value
       .toLowerCase()
-      .replace(/^.*\//, "") // Remove path
-      .replace(/\.[a-z0-9]+$/, "") // Remove extension
-      .replace(/\s*\(\d+\)\s*/g, "") // Remove (1), (2), etc.
-      .replace(/[-_]\d+$/, "") // Remove trailing -1, _1, etc.
-      .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumeric with dash
-      .replace(/-+/g, "-") // Replace multiple dashes with single
-      .replace(/^-|-$/g, ""); // Remove leading/trailing dashes
-  };
+      .replace(/\.[a-z0-9]+$/, "")
+      .replace(/\s*\(\d+\)\s*/g, " ")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
 
-  // Simple fallback image component - no PDF rendering
-  function SimpleThumb({ alt, image }: { alt: string; image?: string }) {
-    if (image) {
-      return (
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
-          <img src={image} alt={alt} className="h-full w-full object-cover" />
-        </div>
-      );
-    }
-    
+  function PdfThumb({ url, alt }: { url: string; alt: string }) {
+    const [thumb, setThumb] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [errored, setErrored] = useState(false);
+    const hostRef = useRef<HTMLDivElement | null>(null);
+    const startedRef = useRef(false);
+
+    useEffect(() => {
+      const el = hostRef.current;
+      if (!el) return;
+
+      const start = () => {
+        if (startedRef.current) return;
+        startedRef.current = true;
+        (async () => {
+          try {
+            const cached = thumbCache.get(url);
+            if (cached) {
+              setThumb(cached);
+              setLoading(false);
+              return;
+            }
+            const loadingTask = (pdfjsLib as any).getDocument({ url });
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+            const containerWidth = hostRef.current?.clientWidth || 640;
+            const baseViewport = page.getViewport({ scale: 1 });
+            const scale = Math.min(1.2, Math.max(0.3, containerWidth / baseViewport.width));
+            const viewport = page.getViewport({ scale });
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            await page.render({ canvasContext: ctx!, viewport }).promise;
+            const dataUrl = canvas.toDataURL("image/png");
+            thumbCache.set(url, dataUrl);
+            setThumb(dataUrl);
+          } catch (_e) {
+            setErrored(true);
+          } finally {
+            setLoading(false);
+          }
+        })();
+      };
+
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                start();
+                io.disconnect();
+              }
+            });
+          },
+          { rootMargin: "150px" }
+        );
+        io.observe(el);
+        return () => io.disconnect();
+      }
+
+      // Fallback without IO
+      start();
+    }, [url]);
+
     return (
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
-        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-          <div className="text-center">
-            <Layers className="mx-auto mb-2 h-8 w-8 opacity-50" />
-            <div>Catalog Preview</div>
-            <div className="text-xs opacity-70">Click to view</div>
+      <div ref={hostRef} className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
+        {thumb ? (
+          <img src={thumb} alt={alt} className="h-full w-full object-contain bg-white" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            {errored ? "Preview unavailable" : loading ? "Generating preview…" : "Preview unavailable"}
           </div>
-        </div>
+        )}
       </div>
     );
   }
-
   // Static PDF catalogs imported from assets (build-time glob)
   const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
   const staticPdfs = useMemo(() => {
@@ -106,42 +165,30 @@ const Catalogs = () => {
         .replace(/\s+/g, " ")
         .replace(/\s*\(\d+\)\s*/g, " ")
         .trim();
-
-    // Create better image matching
-    const imageByName = new Map<string, string>();
+    const imageByKey = new Map<string, string>();
     Object.entries(imageModules).forEach(([imgPath, imgUrl]) => {
-      const key = normalizeKey(imgPath);
-      imageByName.set(key, imgUrl);
+      imageByKey.set(normalizeKey(imgPath), imgUrl);
     });
-
     return Object.entries(pdfModules)
       .map(([path, url]) => {
-        const normalizedPdfKey = normalizeKey(path);
-        
-        // Find matching image by trying different variations
-        let image = imageByName.get(normalizedPdfKey);
-        
-        // If no direct match, try without trailing numbers and suffixes
-        if (!image) {
-          const baseName = normalizedPdfKey.replace(/-\d+$/, "").replace(/-+$/, "");
-          image = imageByName.get(baseName);
-        }
-        
-        // If still no match, try even more aggressive normalization
-        if (!image) {
-          const cleanName = normalizedPdfKey.replace(/-(1|2|3|\d+)$/, "");
-          image = imageByName.get(cleanName);
-        }
-
-        return { 
-          title: humanize(path), 
-          url, 
-          image,
-          normalizedKey: normalizedPdfKey // for debugging
-        } as { title: string; url: string; image?: string; normalizedKey?: string };
+        const key = normalizeKey(path);
+        const image = imageByKey.get(key);
+        return { title: humanize(path), url, image } as { title: string; url: string; image?: string };
       })
       .sort((a, b) => a.title.localeCompare(b.title));
   }, []);
+
+  // A thumb component that uses a catalog image if present, otherwise falls back to a PDF render
+  function CatalogThumb({ url, alt, image }: { url: string; alt: string; image?: string }) {
+    if (image) {
+      return (
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
+          <img src={image} alt={alt} className="h-full w-full object-cover" />
+        </div>
+      );
+    }
+    return <PdfThumb url={url} alt={alt} />;
+  }
 
   // Lightweight viewer state
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -266,7 +313,7 @@ const Catalogs = () => {
       formats: ["PDF"],
       items: [],
       pdfUrl: p.url,
-      imageUrl: p.image,
+      imageUrl: (p as any).image as string | undefined,
     }));
   }, [staticPdfs]);
 
@@ -301,7 +348,7 @@ const Catalogs = () => {
       it.categories.join("; "),
     ]);
     const csv = [header, ...rows]
-      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}`).join(","))
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
@@ -524,7 +571,7 @@ const Catalogs = () => {
                     <CardDescription className="text-xs text-muted-foreground">Catalog · PDF</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <SimpleThumb alt={pdf.title} image={pdf.image} />
+                    <CatalogThumb url={pdf.url} alt={pdf.title} image={pdf.image} />
                   </CardContent>
                   <CardFooter className="flex items-center justify-between gap-2 border-t bg-muted/30 px-6 py-4">
                     <Button
@@ -585,9 +632,15 @@ const Catalogs = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                  {("pdfUrl" in catalog && (catalog as any).pdfUrl) && (
+                  {"pdfUrl" in catalog && (catalog as any).pdfUrl && (
                     <div>
-                      <SimpleThumb alt={catalog.title} image={(catalog as any).imageUrl} />
+                      {"imageUrl" in catalog && (catalog as any).imageUrl ? (
+                        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
+                          <img src={(catalog as any).imageUrl} alt={catalog.title} className="h-full w-full object-cover" />
+                        </div>
+                      ) : (
+                        <PdfThumb url={(catalog as any).pdfUrl} alt={catalog.title} />
+                      )}
                     </div>
                   )}
                   <div className="flex flex-wrap gap-2">
