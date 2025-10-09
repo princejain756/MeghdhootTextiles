@@ -6,6 +6,7 @@ import catalogImage from "@/assets/catalog-showcase.jpg";
 import sareesImage from "@/assets/forsaree.jpeg";
 import salwarImage from "@/assets/salwarsuitsfor.webp";
 import { Link } from "react-router-dom";
+import kurtisImage from "@/assets/forkurtas.webp";
 
 const CategoriesSection = () => {
   const categories = [
@@ -24,6 +25,14 @@ const CategoriesSection = () => {
       popular: true,
       image: salwarImage,
       gradient: "from-blue-500/20 to-cyan-500/20",
+    },
+    {
+      name: "Kurtis",
+      description: "Casual and formal kurtis in cotton, rayon, and silk",
+      catalogCount: "200+ Catalogs",
+      popular: false,
+      image: kurtisImage,
+      gradient: "from-green-500/20 to-emerald-500/20",
     },
   ];
 
