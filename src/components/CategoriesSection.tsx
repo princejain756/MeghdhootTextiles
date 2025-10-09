@@ -28,7 +28,7 @@ const CategoriesSection = () => {
     {
       name: "Kurtis",
       description: "Casual and formal kurtis in cotton, rayon, and silk",
-      catalogCount: "200+ Catalogs",
+      catalogCount: "25+ Catalogs",
       popular: false,
       image: kurtisImage,
       gradient: "from-green-500/20 to-emerald-500/20",
