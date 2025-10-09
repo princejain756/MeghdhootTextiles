@@ -139,18 +139,18 @@ const Contact = () => {
       features: ["Showroom", "Warehouse", "Design Studio", "Customer Service"]
     },
     {
-      name: "Mumbai Office",
-      address: "Textile Market, Lower Parel\nMumbai – 400013, Maharashtra, India",
-      phone: "+91 22 1234 5678",
-      email: "mumbai@meghdoottextiles.com",
+      name: "Bengaluru Sales Store",
+      address: "No.82, J M Road, Avenue Road cross\nBangalore - 560002",
+      phone: "+91 93425 03401",
+      email: "info@meghdoottextiles.com",
       hours: "Mon-Fri: 10:00 AM - 5:00 PM",
       features: ["Sales Office", "Sample Room", "Customer Service"]
     },
     {
-      name: "Delhi Office",
-      address: "Karol Bagh Market\nNew Delhi – 110005, India",
-      phone: "+91 11 2345 6789",
-      email: "delhi@meghdoottextiles.com",
+      name: "Kolkata Sales Store",
+      address: "6th Floor, 95B, Park Street\nOpp : Deputy Commissioner Office\nKolkata, West Bengal 700016",
+      phone: "+91 93425 03401",
+      email: "info@meghdoottextiles.com",
       hours: "Mon-Fri: 10:00 AM - 5:00 PM",
       features: ["Sales Office", "Sample Room"]
     }
