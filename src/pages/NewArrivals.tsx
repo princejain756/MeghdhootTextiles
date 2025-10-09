@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { TrendingUp, Sparkles, CalendarDays, BellRing, Clock, Palette, ArrowUpRight } from "lucide-react";
 import ProductGrid from "@/components/ProductGrid";
+import { useMemo } from "react";
 
 const arrivalHighlights = [
   {
@@ -67,26 +68,51 @@ const timelineMilestones = [
   },
 ];
 
-const lookbookSlides = [
-  {
-    title: "Saree Story: Noor",
-    palette: "Saffron • Garnet • Ivory",
-    narrative:
-      "Hand-embellished motifs inspired by royal domes with floating zari trails and velvet borders.",
-  },
-  {
-    title: "Kurti Edit: Prism",
-    palette: "Teal • Sand • Charcoal",
-    narrative:
-      "Architectural paneling, minimal mirror appliqué and modern necklines for cosmopolitan shoppers.",
-  },
-  {
-    title: "Co-ord Drop: Rhythm",
-    palette: "Wine • Blush • Midnight",
-    narrative:
-      "Fluid silhouettes with cinched waists and sheen-rich satin georgette for cocktail evenings.",
-  },
-];
+// Dynamically surface real catalog cover images from assets
+type LookbookSlide = { title: string; image: string; pdfUrl?: string };
+
+// Normalization helpers to match image filenames to PDF filenames
+const normalizeKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/^.*\//, "") // strip path
+    .replace(/\.[a-z0-9]+$/, "") // strip extension
+    .replace(/\s*\(\d+\)\s*/g, "") // remove (1), (2), etc
+    .replace(/[-_]\d+$/, "") // trailing -1 _1
+    .replace(/[^a-z0-9]+/g, "-") // non-alnum => dash
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const humanize = (file: string) =>
+  file
+    .replace(/^.*\//, "")
+    .replace(/\.[a-zA-Z0-9]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s*\(\d+\)\s*/g, " ")
+    .trim();
+
+// Build slides: images from CatalogImages + best-effort match to PDF in Catalogs
+const buildLookbookSlides = (): LookbookSlide[] => {
+  const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", { eager: true, as: "url" }) as Record<string, string>;
+  const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
+
+  const pdfByKey = new Map<string, string>();
+  Object.entries(pdfModules).forEach(([p, url]) => {
+    const k = normalizeKey(p);
+    pdfByKey.set(k, url);
+    pdfByKey.set(k.replace(/-\d+$/, ""), url);
+  });
+
+  return Object.entries(imageModules)
+    .map(([imgPath, imgUrl]) => {
+      const key = normalizeKey(imgPath);
+      const base = key.replace(/-\d+$/, "");
+      const pdfUrl = pdfByKey.get(key) || pdfByKey.get(base);
+      return { title: humanize(imgPath), image: imgUrl, pdfUrl } as LookbookSlide;
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+};
 
 const dropKits = [
   {
@@ -104,6 +130,7 @@ const dropKits = [
 ];
 
 const NewArrivals = () => {
+  const lookbookSlides = useMemo(buildLookbookSlides, []);
   return (
     <PageLayout>
       <section className="relative overflow-hidden bg-gradient-to-br from-[#101828] via-primary/95 to-[#1d2a3f] text-primary-foreground">
@@ -264,18 +291,28 @@ const NewArrivals = () => {
               {lookbookSlides.map((slide) => (
                 <CarouselItem key={slide.title} className="md:basis-1/2 lg:basis-1/3">
                   <Card className="h-full overflow-hidden border border-border/80 bg-card shadow-sm">
-                    <div className="relative h-48 bg-gradient-to-br from-primary/90 via-primary/80 to-accent/70">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.18),transparent_60%)]" />
+                    <div className="relative aspect-[4/3] w-full">
+                      <img src={slide.image} alt={slide.title} className="absolute inset-0 h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-background/20 to-transparent" />
+                      {slide.pdfUrl ? (
+                        <a
+                          href={`/catalogs?pdf=${encodeURIComponent(slide.pdfUrl)}`}
+                          title="View catalog"
+                          className="absolute right-2 top-2 rounded-md bg-background/80 p-2 text-foreground shadow hover:bg-background"
+                        >
+                          <ArrowUpRight className="h-4 w-4" />
+                        </a>
+                      ) : null}
                     </div>
                     <CardHeader className="space-y-2">
                       <CardTitle className="text-lg">{slide.title}</CardTitle>
-                      <CardDescription className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {slide.palette}
-                      </CardDescription>
+                      {slide.pdfUrl ? (
+                        <CardDescription className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Tap the icon to preview PDF
+                        </CardDescription>
+                      ) : null}
                     </CardHeader>
-                    <CardContent className="text-sm text-muted-foreground">
-                      {slide.narrative}
-                    </CardContent>
+                    {/* No narrative text; images are the hero */}
                   </Card>
                 </CarouselItem>
               ))}
