@@ -36,6 +36,24 @@ const upload = multer({
   },
 });
 
+// Separate uploader for PDFs
+const pdfFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
+  if (file.mimetype === "application/pdf") {
+    cb(null, true);
+  } else {
+    cb(new Error("Only PDF files are allowed"));
+  }
+};
+
+const uploadPdf = multer({
+  storage,
+  fileFilter: pdfFilter,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB per file
+    files: 4,
+  },
+});
+
 // Admin-only endpoint for image uploads
 router.post(
   "/images",
@@ -45,5 +63,12 @@ router.post(
   respondWithUploadedFiles
 );
 
-export default router;
+router.post(
+  "/pdfs",
+  authenticate,
+  requireRole(Role.ADMIN),
+  uploadPdf.array("files", 4),
+  respondWithUploadedFiles
+);
 
+export default router;

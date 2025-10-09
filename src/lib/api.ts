@@ -166,4 +166,58 @@ export const UploadApi = {
       }
     );
   },
+  pdfs: (files: File[]) => {
+    const fd = new FormData();
+    files.forEach((file) => fd.append("files", file));
+    return request<{ success: true; files: Array<{ url: string; filename: string; size: number }> }>(
+      "/uploads/pdfs",
+      {
+        method: "POST",
+        body: fd,
+      }
+    );
+  },
+  imagesWithProgress: (files: File[], onProgress?: (pct: number) => void) =>
+    xhrUpload("/uploads/images", files, onProgress),
+  pdfsWithProgress: (files: File[], onProgress?: (pct: number) => void) =>
+    xhrUpload("/uploads/pdfs", files, onProgress),
 };
+
+// Helper for upload progress using XHR (fetch lacks upload progress events reliably)
+function xhrUpload(path: string, files: File[], onProgress?: (pct: number) => void) {
+  return new Promise<{ success: true; files: Array<{ url: string; filename: string; size: number }> }>((resolve, reject) => {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}${path}`, true);
+      xhr.withCredentials = true;
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              resolve(data);
+            } catch (err) {
+              reject(new Error("Failed to parse upload response"));
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        }
+      };
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (evt) => {
+          if (evt.lengthComputable) {
+            const pct = Math.round((evt.loaded / evt.total) * 100);
+            onProgress(pct);
+          }
+        };
+      }
+      xhr.onerror = () => reject(new Error("Network error during upload"));
+      const fd = new FormData();
+      files.forEach((file) => fd.append("files", file));
+      xhr.send(fd);
+    } catch (err) {
+      reject(err as Error);
+    }
+  });
+}

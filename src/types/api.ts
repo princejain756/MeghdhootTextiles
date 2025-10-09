@@ -65,6 +65,13 @@ export interface ApiCatalog {
   category?: string | null;
   status: string;
   downloads: number;
+  catalogCode?: string | null;
+  fabric?: string | null;
+  setSize?: string | null;
+  dispatch?: string | null;
+  coverImageUrl?: string | null;
+  pdfUrl?: string | null;
+  itemsCount?: number | null;
   createdAt: string;
   updatedAt: string;
   items: CatalogItem[];

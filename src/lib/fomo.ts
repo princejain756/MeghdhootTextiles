@@ -146,6 +146,24 @@ export function fakeCatalogFomo(key: string): CatalogFomo {
   };
 }
 
+export function fakePerkPool() {
+  // Weekly pool of 50 swatch packs, decreasing over time in IST week
+  const startOfWeek = (() => {
+    const n = nowIST();
+    const day = n.getDay(); // 0..6
+    const diffToMon = (day + 6) % 7; // days since Monday
+    const s = new Date(n.getTime());
+    s.setDate(n.getDate() - diffToMon);
+    s.setHours(0, 0, 0, 0);
+    return s;
+  })();
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
+  const elapsed = nowIST().getTime() - startOfWeek.getTime();
+  const fraction = Math.min(1, Math.max(0, elapsed / weekMs));
+  const remaining = Math.max(0, Math.round(50 * (1 - fraction)) - 1);
+  return { total: 50, left: remaining };
+}
+
 export function compactCountdown(countdown: Countdown) {
   if (countdown.days > 0) return `${countdown.days}d ${countdown.hours}h`;
   if (countdown.hours > 0) return `${countdown.hours}h ${countdown.minutes}m`;

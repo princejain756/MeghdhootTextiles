@@ -5,6 +5,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Eye, Heart, ShoppingCart, Lock, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useQuery } from "@tanstack/react-query";
+import { CatalogApi } from "@/lib/api";
+import type { ApiCatalog } from "@/types/api";
 
 type CatalogCard = {
   id: string;
@@ -79,6 +82,50 @@ const CatalogSection = () => {
     return { catalogs: items };
   }, []);
 
+  // Fetch admin-defined catalog metadata and overlay into local items by normalized title
+  const apiQuery = useQuery({ queryKey: ["catalogs", "public", "cards"], queryFn: () => CatalogApi.list() });
+  const mergedCatalogs: CatalogCard[] = useMemo(() => {
+    const apiCatalogs: ApiCatalog[] = apiQuery.data?.catalogs ?? [];
+    const toKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    const byTitle = new Map<string, ApiCatalog>();
+    const byCode = new Map<string, ApiCatalog>();
+    apiCatalogs.forEach((c) => {
+      byTitle.set(toKey(c.title), c);
+      if (c.catalogCode) byCode.set(c.catalogCode, c);
+    });
+    const seen = new Set<string>();
+    const merged = catalogs.map((local) => {
+      const match = byCode.get(local.id) ?? byTitle.get(toKey(local.name));
+      if (!match) return local;
+      if (match.id) seen.add(match.id);
+      return {
+        ...local,
+        id: match.catalogCode ?? local.id,
+        fabric: match.fabric ?? local.fabric,
+        setSize: match.setSize ?? local.setSize,
+        dispatch: match.dispatch ?? local.dispatch,
+        image: match.coverImageUrl ?? local.image,
+        pdfUrl: match.pdfUrl ?? local.pdfUrl,
+      };
+    });
+
+    // Add API catalogs that didn't match a local asset (ensure they appear too)
+    const extras: CatalogCard[] = apiCatalogs
+      .filter((c) => !seen.has(c.id) && (!byCode.has(c.catalogCode ?? "") || !catalogs.some((l) => l.id === (c.catalogCode ?? ""))))
+      .map((c, idx) => ({
+        id: c.catalogCode || `CAT${String(100 + idx).padStart(3, "0")}`,
+        name: c.title,
+        fabric: c.fabric || "Assorted",
+        setSize: c.setSize || `${c.itemsCount ?? 0} pieces`,
+        category: c.category || "Sarees",
+        dispatch: c.dispatch || "3-5 days",
+        image: c.coverImageUrl || "",
+        pdfUrl: c.pdfUrl || undefined,
+      }));
+
+    return [...merged, ...extras];
+  }, [apiQuery.data, catalogs]);
+
   return (
     <section className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -95,15 +142,21 @@ const CatalogSection = () => {
 
         {/* Catalog grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {catalogs.map((catalog) => (
+          {mergedCatalogs.map((catalog) => (
             <Card key={catalog.id} className="glass-card group hover:shadow-strong transition-all duration-300 hover:-translate-y-2">
               <CardHeader className="p-0">
                 <div className="relative overflow-hidden rounded-t-lg">
-                  <img
-                    src={catalog.image}
-                    alt={catalog.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  {catalog.image ? (
+                    <img
+                      src={catalog.image}
+                      alt={catalog.name}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center bg-muted/40 text-muted-foreground">
+                      <span className="text-xs">Catalog cover</span>
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3">
                     <Badge className="bg-primary text-primary-foreground">
                       {catalog.category}

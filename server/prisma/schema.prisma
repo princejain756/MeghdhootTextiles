@@ -237,6 +237,14 @@ model Catalog {
   category    String?
   status      String           @default("ACTIVE")
   downloads   Int              @default(0)
+  // Additional storefront metadata shown on catalog cards
+  catalogCode String?          @unique
+  fabric      String?
+  setSize     String?
+  dispatch    String?
+  coverImageUrl String?
+  pdfUrl        String?
+  itemsCount    Int?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   items       CatalogProduct[]

@@ -61,7 +61,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import PageLayout from "@/components/PageLayout";
 import FullScreenLoader from "@/components/FullScreenLoader";
 import { useAuth } from "@/context/AuthContext";
-import { AuthApi, OrderApi, ProductApi, SupportApi, ApiUtils, CatalogApi } from "@/lib/api";
+import { AuthApi, OrderApi, ProductApi, SupportApi, ApiUtils, CatalogApi, UploadApi } from "@/lib/api";
 import ImageUploader, { type UploaderImage } from "@/components/ImageUploader";
 import type {
   ApiOrder,
@@ -75,6 +75,7 @@ import type {
 import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Name is required"),
@@ -119,6 +120,12 @@ const AdminDashboard = () => {
   const [images, setImages] = useState<UploaderImage[]>([]);
   const [isCatalogDialogOpen, setIsCatalogDialogOpen] = useState(false);
   const [editingCatalog, setEditingCatalog] = useState<ApiCatalog | null>(null);
+  const [catalogCoverUrl, setCatalogCoverUrl] = useState("");
+  const [catalogPdfUrl, setCatalogPdfUrl] = useState("");
+  const [coverPct, setCoverPct] = useState(0);
+  const [pdfPct, setPdfPct] = useState(0);
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const [isPdfUploading, setIsPdfUploading] = useState(false);
   const [isManageProductsOpen, setIsManageProductsOpen] = useState(false);
   const [manageCatalog, setManageCatalog] = useState<ApiCatalog | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -157,6 +164,81 @@ const AdminDashboard = () => {
     select: (response) => response.catalogs,
     enabled: Boolean(user),
   });
+
+  // Helper to import local PDFs/images into DB as catalogs (admin convenience)
+  const bulkImportLocal = async () => {
+    try {
+      // Discover local PDFs and cover images
+      const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", {
+        eager: true,
+        as: "url",
+      }) as Record<string, string>;
+      const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
+
+      const toKey = (s: string) => s.toLowerCase().replace(/\s*\(\d+\)\s*/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+      const humanize = (file: string) => file.replace(/^.*\//, "").replace(/\.[Pp][Dd][Ff]$/, "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").replace(/\s*\(\d+\)\s*/g, " ").trim();
+      const imagesByKey = new Map<string, string>();
+      Object.entries(imageModules).forEach(([p, u]) => imagesByKey.set(toKey(p), u));
+
+      const desiredCounts: Record<string, number> = {
+        "avantika": 8,
+        "dg-0661": 8,
+        "khadi-hand-embroidery": 4,
+        "khadi-hand-embroidery-1": 4,
+        "divine": 8,
+        "sakhi": 6,
+        "tanaya-delight-dg-0629-t": 9,
+        "skanda-supreme-dg-0566": 8,
+      };
+
+      const existingByTitle = new Set((catalogsQuery.data ?? []).map((c) => toKey(c.title)));
+
+      const toAbs = (u?: string) => (u ? (u.startsWith("http") ? u : new URL(u, window.location.origin).toString()) : undefined);
+      const payloads = Object.entries(pdfModules).map(([path, url]) => {
+        const title = humanize(path);
+        const k = toKey(path);
+        const img = imagesByKey.get(k) || imagesByKey.get(k.replace(/-(\d+)$/, "")) || "";
+        const count = desiredCounts[k] ?? 0;
+        return {
+          title,
+          category: "sarees",
+          catalogCode: undefined as string | undefined,
+          fabric: "Assorted",
+          setSize: "12 pieces",
+          dispatch: "3-5 days",
+          coverImageUrl: toAbs(img),
+          pdfUrl: toAbs(url),
+          itemsCount: count || undefined,
+          _key: k,
+        };
+      });
+
+      const toCreate = payloads.filter((p) => !existingByTitle.has(toKey(p.title)));
+      if (!toCreate.length) {
+        toast({ title: "Nothing to import", description: "All local PDFs are already in admin.", });
+        return;
+      }
+
+      for (const p of toCreate) {
+        await CatalogApi.create({
+          title: p.title,
+          category: p.category,
+          description: undefined,
+          catalogCode: p.catalogCode,
+          fabric: p.fabric,
+          setSize: p.setSize,
+          dispatch: p.dispatch,
+          coverImageUrl: p.coverImageUrl,
+          pdfUrl: p.pdfUrl,
+          itemsCount: p.itemsCount,
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["catalogs"] });
+      toast({ title: `Imported ${toCreate.length} catalog(s)` });
+    } catch (err) {
+      toast({ title: "Import failed", description: String((err as Error)?.message ?? err), variant: "destructive" });
+    }
+  };
 
   const ordersQuery = useQuery({
     queryKey: ["orders"],
@@ -220,11 +302,15 @@ const AdminDashboard = () => {
   const openCreateCatalog = () => {
     setEditingCatalog(null);
     setIsCatalogDialogOpen(true);
+    setCatalogCoverUrl("");
+    setCatalogPdfUrl("");
   };
 
   const openEditCatalog = (catalog: ApiCatalog) => {
     setEditingCatalog(catalog);
     setIsCatalogDialogOpen(true);
+    setCatalogCoverUrl(catalog.coverImageUrl ?? "");
+    setCatalogPdfUrl(catalog.pdfUrl ?? "");
   };
 
   const openManageProducts = (catalog: ApiCatalog) => {
@@ -352,7 +438,7 @@ const AdminDashboard = () => {
   });
 
   const createCatalogMutation = useMutation({
-    mutationFn: (values: { title: string; description?: string; category?: string }) =>
+    mutationFn: (values: { title: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string }) =>
       CatalogApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["catalogs"] });
@@ -364,7 +450,7 @@ const AdminDashboard = () => {
   });
 
   const updateCatalogMutation = useMutation({
-    mutationFn: (values: { title?: string; description?: string; category?: string }) => {
+    mutationFn: (values: { title?: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string }) => {
       if (!editingCatalog) throw new Error("No catalog selected");
       return CatalogApi.update(editingCatalog.id, values);
     },
@@ -472,7 +558,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCatalogSubmit = async (values: { title: string; description?: string; category?: string }) => {
+  const handleCatalogSubmit = async (values: { title: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string }) => {
     if (editingCatalog) {
       await updateCatalogMutation.mutateAsync(values);
     } else {
@@ -766,9 +852,12 @@ const AdminDashboard = () => {
                 <h2 className="text-xl font-semibold">Catalogs</h2>
                 <p className="text-sm text-muted-foreground">Group products into curated sets for B2B buyers.</p>
               </div>
-              <Button onClick={openCreateCatalog} className="gap-2">
-                <Plus className="h-4 w-4" /> New catalog
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={bulkImportLocal}>Import local PDFs</Button>
+                <Button onClick={openCreateCatalog} className="gap-2">
+                  <Plus className="h-4 w-4" /> New catalog
+                </Button>
+              </div>
             </div>
             <Card className="border shadow-sm">
               <CardContent className="p-0">
@@ -783,6 +872,10 @@ const AdminDashboard = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Title</TableHead>
+                        <TableHead>Catalog ID</TableHead>
+                        <TableHead>Fabric</TableHead>
+                        <TableHead>Set Size</TableHead>
+                        <TableHead>Dispatch</TableHead>
                         <TableHead>Category</TableHead>
                         <TableHead>Items</TableHead>
                         <TableHead>Updated</TableHead>
@@ -793,8 +886,12 @@ const AdminDashboard = () => {
                       {catalogsQuery.data.map((cat) => (
                         <TableRow key={cat.id}>
                           <TableCell className="font-medium">{cat.title}</TableCell>
+                          <TableCell>{cat.catalogCode ?? "—"}</TableCell>
+                          <TableCell>{cat.fabric ?? "—"}</TableCell>
+                          <TableCell>{cat.setSize ?? "—"}</TableCell>
+                          <TableCell>{cat.dispatch ?? "—"}</TableCell>
                           <TableCell>{cat.category ?? "—"}</TableCell>
-                          <TableCell>{cat.items.length}</TableCell>
+                          <TableCell>{cat.items.length || cat.itemsCount || 0}</TableCell>
                           <TableCell>{format(new Date(cat.updatedAt), "dd MMM yyyy")}</TableCell>
                           <TableCell className="space-x-2">
                             <Button size="sm" variant="outline" onClick={() => openEditCatalog(cat)}>
@@ -1155,7 +1252,11 @@ const AdminDashboard = () => {
           open={isCatalogDialogOpen}
           onOpenChange={(open) => {
             setIsCatalogDialogOpen(open);
-            if (!open) setEditingCatalog(null);
+            if (!open) {
+              setEditingCatalog(null);
+              setCatalogCoverUrl("");
+              setCatalogPdfUrl("");
+            }
           }}
         >
           <DialogContent className="max-w-lg">
@@ -1171,6 +1272,13 @@ const AdminDashboard = () => {
                   title: String(fd.get("title") ?? ""),
                   category: String(fd.get("category") ?? "") || undefined,
                   description: String(fd.get("description") ?? "") || undefined,
+                  catalogCode: String(fd.get("catalogCode") ?? "") || undefined,
+                  fabric: String(fd.get("fabric") ?? "") || undefined,
+                  setSize: String(fd.get("setSize") ?? "") || undefined,
+                  dispatch: String(fd.get("dispatch") ?? "") || undefined,
+                  coverImageUrl: (String(fd.get("coverImageUrl") ?? "") || undefined) ?? (catalogCoverUrl || undefined),
+                  pdfUrl: (String(fd.get("pdfUrl") ?? "") || undefined) ?? (catalogPdfUrl || undefined),
+                  itemsCount: Number(String(fd.get("itemsCount") ?? "")) || undefined,
                 };
                 await handleCatalogSubmit(payload);
               }}
@@ -1179,9 +1287,108 @@ const AdminDashboard = () => {
                 <Label htmlFor="title">Title</Label>
                 <Input id="title" name="title" defaultValue={editingCatalog?.title ?? ""} required />
               </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="coverImageUrl">Cover image URL</Label>
+                  <div className="flex gap-2">
+                    <Input id="coverImageUrl" name="coverImageUrl" placeholder="https://.../cover.webp" value={catalogCoverUrl} onChange={(e) => setCatalogCoverUrl(e.target.value)} />
+                    <input id="coverUpload" type="file" accept="image/*" hidden onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsCoverUploading(true);
+                      setCoverPct(0);
+                      try {
+                        const res = await UploadApi.imagesWithProgress([file], (pct) => setCoverPct(pct));
+                        const url = res.files[0]?.url;
+                        if (url) setCatalogCoverUrl(url);
+                      } catch (err) {
+                        console.error(err);
+                        toast({ title: "Upload failed", description: String((err as Error).message ?? err), variant: "destructive" });
+                      } finally {
+                        setIsCoverUploading(false);
+                        setTimeout(() => setCoverPct(0), 600);
+                      }
+                    }} />
+                    <Button type="button" variant="outline" onClick={() => document.getElementById("coverUpload")?.click()} disabled={isCoverUploading}>
+                      {isCoverUploading ? `Uploading ${coverPct}%` : "Upload"}
+                    </Button>
+                  </div>
+                  {isCoverUploading || coverPct > 0 ? (
+                    <div className="pt-2">
+                      <Progress value={coverPct} className="h-2" />
+                    </div>
+                  ) : null}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="pdfUrl">Catalog PDF URL</Label>
+                  <div className="flex gap-2">
+                    <Input id="pdfUrl" name="pdfUrl" placeholder="https://.../catalog.pdf" value={catalogPdfUrl} onChange={(e) => setCatalogPdfUrl(e.target.value)} />
+                    <input id="pdfUpload" type="file" accept="application/pdf" hidden onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setIsPdfUploading(true);
+                      setPdfPct(0);
+                      try {
+                        const res = await UploadApi.pdfsWithProgress([file], (pct) => setPdfPct(pct));
+                        const url = res.files[0]?.url;
+                        if (url) setCatalogPdfUrl(url);
+                        // If title is empty, set from filename
+                        const titleEl = document.getElementById("title") as HTMLInputElement | null;
+                        if (titleEl && !titleEl.value) {
+                          const base = (file.name || "").replace(/\.[Pp][Dd][Ff]$/, "").replace(/[_-]+/g, " ").trim();
+                          titleEl.value = base;
+                        }
+                      } catch (err) {
+                        console.error(err);
+                        toast({ title: "Upload failed", description: String((err as Error).message ?? err), variant: "destructive" });
+                      } finally {
+                        setIsPdfUploading(false);
+                        setTimeout(() => setPdfPct(0), 600);
+                      }
+                    }} />
+                    <Button type="button" variant="outline" onClick={() => document.getElementById("pdfUpload")?.click()} disabled={isPdfUploading}>
+                      {isPdfUploading ? `Uploading ${pdfPct}%` : "Upload"}
+                    </Button>
+                  </div>
+                  {isPdfUploading || pdfPct > 0 ? (
+                    <div className="pt-2">
+                      <Progress value={pdfPct} className="h-2" />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="itemsCount">Products in catalog</Label>
+                  <Input id="itemsCount" name="itemsCount" type="number" min={0} placeholder="e.g. 8" defaultValue={editingCatalog?.itemsCount ?? ""} />
+                  <p className="text-xs text-muted-foreground">Used to show “8 styles selected” when products aren’t linked yet.</p>
+                </div>
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="category">Category</Label>
                 <Input id="category" name="category" placeholder="sarees, kurtis…" defaultValue={editingCatalog?.category ?? ""} />
+              </div>
+              {/* Additional storefront metadata */}
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="catalogCode">Catalog ID</Label>
+                  <Input id="catalogCode" name="catalogCode" placeholder="CAT005" defaultValue={editingCatalog?.catalogCode ?? ""} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="fabric">Fabric</Label>
+                  <Input id="fabric" name="fabric" placeholder="Assorted" defaultValue={editingCatalog?.fabric ?? ""} />
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="setSize">Set Size</Label>
+                  <Input id="setSize" name="setSize" placeholder="12 pieces" defaultValue={editingCatalog?.setSize ?? ""} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="dispatch">Dispatch</Label>
+                  <Input id="dispatch" name="dispatch" placeholder="3-5 days" defaultValue={editingCatalog?.dispatch ?? ""} />
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>

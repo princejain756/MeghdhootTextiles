@@ -214,11 +214,13 @@ const Catalogs = () => {
       updated: new Date(c.updatedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
       downloads: String(c.downloads ?? 0),
       highlights: [
-        `${c.items.length} styles selected`,
+        `${(c.items?.length ?? 0) || (c.itemsCount ?? 0)} styles selected`,
         "Includes price sheet",
         "Ready-to-share assets",
       ],
       formats: ["PDF", "CSV"],
+      pdfUrl: c.pdfUrl || undefined,
+      imageUrl: c.coverImageUrl || undefined,
       items: c.items.map((it) => ({
         name: it.product.name,
         sku: it.product.sku ?? "",
@@ -585,7 +587,7 @@ const Catalogs = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                  {("pdfUrl" in catalog && (catalog as any).pdfUrl) && (
+                  {(("imageUrl" in catalog && (catalog as any).imageUrl) || ("pdfUrl" in catalog && (catalog as any).pdfUrl)) && (
                     <div>
                       <SimpleThumb alt={catalog.title} image={(catalog as any).imageUrl} />
                     </div>

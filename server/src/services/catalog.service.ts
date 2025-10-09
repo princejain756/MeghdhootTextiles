@@ -6,6 +6,13 @@ export interface CatalogInput {
   description?: string;
   category?: string;
   status?: string;
+  catalogCode?: string;
+  fabric?: string;
+  setSize?: string;
+  dispatch?: string;
+  coverImageUrl?: string;
+  pdfUrl?: string;
+  itemsCount?: number;
   productIds?: string[]; // optional set + order
 }
 
@@ -76,6 +83,13 @@ export const CatalogService = {
         description: input.description,
         category: input.category,
         status: input.status ?? "ACTIVE",
+        catalogCode: input.catalogCode,
+        fabric: input.fabric,
+        setSize: input.setSize,
+        dispatch: input.dispatch,
+        coverImageUrl: input.coverImageUrl,
+        pdfUrl: input.pdfUrl,
+        itemsCount: input.itemsCount,
         items: productIds.length
           ? {
               create: productIds.map((id, index) => ({ productId: id, position: index })),
@@ -99,6 +113,13 @@ export const CatalogService = {
         description: input.description,
         category: input.category,
         status: input.status,
+        catalogCode: input.catalogCode,
+        fabric: input.fabric,
+        setSize: input.setSize,
+        dispatch: input.dispatch,
+        coverImageUrl: input.coverImageUrl,
+        pdfUrl: input.pdfUrl,
+        itemsCount: input.itemsCount,
         ...(productIds
           ? {
               items: {
@@ -131,4 +152,3 @@ export const CatalogService = {
     await prisma.catalog.delete({ where: { id } });
   },
 };
-
