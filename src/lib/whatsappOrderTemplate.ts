@@ -41,7 +41,7 @@ Please confirm availability and delivery timeline.`;
   return orderMessage;
 };
 
-export const generateWhatsAppLink = (message: string, phoneNumber: string = "919876543210"): string => {
+export const generateWhatsAppLink = (message: string, phoneNumber: string = "919342503401"): string => {
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
 };
