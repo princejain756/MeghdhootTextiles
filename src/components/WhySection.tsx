@@ -39,8 +39,8 @@ const WhySection = () => {
     },
     {
       icon: MapPin,
-      title: "Surat Hub",
-      description: "Located in India's textile capital with direct access to premium fabric manufacturers.",
+      title: "Bangalore, Kolkata and Surat Hub",
+      description: "Located in India's textile capitals with direct access to premium fabric manufacturers.",
       badge: "Strategic"
     },
     {

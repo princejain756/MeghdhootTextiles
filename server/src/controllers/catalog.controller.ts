@@ -28,7 +28,16 @@ export const setCatalogProducts = asyncHandler(async (req: Request, res: Respons
 });
 
 export const deleteCatalog = asyncHandler(async (req: Request, res: Response) => {
-  await CatalogService.remove(req.params.id);
-  res.status(204).send();
+  try {
+    await CatalogService.remove(req.params.id);
+    res.status(204).send();
+  } catch (err: any) {
+    // Map known Prisma errors to clearer API responses
+    if (err?.code === 'P2025') {
+      // Record to delete does not exist.
+      res.status(404).json({ success: false, message: 'Catalog not found' });
+      return;
+    }
+    throw err;
+  }
 });
-

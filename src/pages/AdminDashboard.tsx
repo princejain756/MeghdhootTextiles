@@ -58,6 +58,16 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import PageLayout from "@/components/PageLayout";
 import FullScreenLoader from "@/components/FullScreenLoader";
 import { useAuth } from "@/context/AuthContext";
@@ -145,6 +155,7 @@ const AdminDashboard = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const [activeTab, setActiveTab] = useState("overview");
+  const [confirmDeleteCatalog, setConfirmDeleteCatalog] = useState<ApiCatalog | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["Sarees", "Kurtis", "Fusion", "Menswear"].slice(0, 0));
   const presetCategories = ["Sarees", "Kurtis", "Fusion", "Menswear"];
   const [respondTicketId, setRespondTicketId] = useState<string | null>(null);
@@ -461,6 +472,17 @@ const AdminDashboard = () => {
       setEditingCatalog(null);
     },
     onError: (error) => toast({ title: "Update failed", description: (error as Error).message, variant: "destructive" }),
+  });
+
+  const deleteCatalog = useMutation({
+    mutationFn: (id: string) => CatalogApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["catalogs"] });
+      toast({ title: "Catalog removed", description: "Catalog deleted successfully." });
+    },
+    onError: (error) => {
+      toast({ title: "Unable to delete", description: (error as Error).message, variant: "destructive" });
+    },
   });
 
   const setCatalogProductsMutation = useMutation({
@@ -899,6 +921,14 @@ const AdminDashboard = () => {
                             </Button>
                             <Button size="sm" onClick={() => openManageProducts(cat)}>
                               <ClipboardList className="mr-1 h-4 w-4" /> Manage items
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setConfirmDeleteCatalog(cat)}
+                              title="Delete catalog"
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" /> Delete
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1609,6 +1639,37 @@ const AdminDashboard = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Confirm delete catalog */}
+        <AlertDialog
+          open={Boolean(confirmDeleteCatalog)}
+          onOpenChange={(open) => {
+            if (!open) setConfirmDeleteCatalog(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete catalog</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDeleteCatalog
+                  ? `Are you sure you want to delete "${confirmDeleteCatalog.title}"? This action cannot be undone.`
+                  : "This action cannot be undone."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (confirmDeleteCatalog) {
+                    deleteCatalog.mutate(confirmDeleteCatalog.id);
+                  }
+                  setConfirmDeleteCatalog(null);
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </PageLayout>
   );

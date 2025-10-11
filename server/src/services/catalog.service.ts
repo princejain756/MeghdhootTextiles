@@ -149,6 +149,10 @@ export const CatalogService = {
   },
 
   async remove(id: string) {
-    await prisma.catalog.delete({ where: { id } });
+    await prisma.$transaction([
+      // Remove junction rows first to satisfy FK constraints
+      prisma.catalogProduct.deleteMany({ where: { catalogId: id } }),
+      prisma.catalog.delete({ where: { id } }),
+    ]);
   },
 };

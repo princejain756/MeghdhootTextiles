@@ -88,7 +88,7 @@ const Contact = () => {
       icon: <Mail className="h-6 w-6" />,
       title: "Email Support",
       description: "Detailed queries via email",
-      contact: "info@meghdoottextiles.com",
+      contact: "blr@meghdoottextiles.com",
       availability: "Response within 24 hours",
       color: "text-blue-600"
     },
@@ -105,7 +105,7 @@ const Contact = () => {
   const departments = [
     {
       name: "General Inquiries",
-      email: "info@meghdoottextiles.com",
+      email: "blr@meghdoottextiles.com",
       phone: "+91 93425 03401",
       description: "General questions about our products and services"
     },
@@ -134,7 +134,7 @@ const Contact = () => {
       name: "Main Operations Center",
       address: "Kamela Darwaja, Umarwada, Ring Road\n(Opp. Millennium Textile Market Back Gate)\nSurat – 395002, Gujarat, India",
       phone: "+91 93425 03401",
-      email: "info@meghdoottextiles.com",
+      email: "blr@meghdoottextiles.com",
       hours: "Mon-Sat: 9:00 AM - 6:00 PM",
       features: ["Showroom", "Warehouse", "Design Studio", "Customer Service"]
     },
@@ -142,7 +142,7 @@ const Contact = () => {
       name: "Bengaluru Sales Store",
       address: "No.82, J M Road, Avenue Road cross\nBangalore - 560002",
       phone: "+91 93425 03401",
-      email: "info@meghdoottextiles.com",
+      email: "blr@meghdoottextiles.com",
       hours: "Mon-Fri: 10:00 AM - 5:00 PM",
       features: ["Sales Office", "Sample Room", "Customer Service"]
     },
@@ -150,7 +150,7 @@ const Contact = () => {
       name: "Kolkata Sales Store",
       address: "6th Floor, 95B, Park Street\nOpp : Deputy Commissioner Office\nKolkata, West Bengal 700016",
       phone: "+91 93425 03401",
-      email: "info@meghdoottextiles.com",
+      email: "blr@meghdoottextiles.com",
       hours: "Mon-Fri: 10:00 AM - 5:00 PM",
       features: ["Sales Office", "Sample Room"]
     }
@@ -474,7 +474,7 @@ const Contact = () => {
                   <div className="text-center">
                     <Mail className="h-8 w-8 mx-auto mb-3" />
                     <div className="font-semibold">Email Us</div>
-                    <div className="text-sm opacity-80">info@meghdoottextiles.com</div>
+                    <div className="text-sm opacity-80">blr@meghdoottextiles.com</div>
                   </div>
                 </Button>
               </div>
