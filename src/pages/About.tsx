@@ -20,6 +20,8 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import { generateWhatsAppLink } from "@/lib/whatsappOrderTemplate";
+import { useToast } from "@/hooks/use-toast";
 
 const timeline = [
   {
@@ -96,6 +98,52 @@ const stats = [
 ];
 
 const About = () => {
+  const { toast } = useToast();
+
+  // Utility functions for button actions
+  const handleExploreJourney = () => {
+    // Scroll to the timeline section
+    const timelineSection = document.querySelector('[data-section="timeline"]');
+    if (timelineSection) {
+      timelineSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    } else {
+      // Fallback - scroll to a reasonable position
+      window.scrollTo({ 
+        top: 600,
+        behavior: 'smooth'
+      });
+    }
+
+    toast({
+      title: "Exploring our journey",
+      description: "Scroll down to see our evolution timeline.",
+    });
+  };
+
+  const handleMeetLeadership = () => {
+    // Scroll to the leadership section
+    const leadershipSection = document.querySelector('[data-section="leadership"]');
+    if (leadershipSection) {
+      leadershipSection.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    } else {
+      // Fallback - open WhatsApp to connect with leadership
+      const message = "Hi, I would like to know more about Meghdoot's leadership team and company background. Please share more details.";
+      const whatsappLink = generateWhatsAppLink(message);
+      window.open(whatsappLink, "_blank");
+      
+      toast({
+        title: "Connecting with leadership",
+        description: "WhatsApp opened to connect with our team.",
+      });
+    }
+  };
+
   return (
     <PageLayout>
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-[#132032] text-primary-foreground">
@@ -112,13 +160,18 @@ const About = () => {
               For over two decades we have been curating premium Indian ethnic wear for retailers, resellers and boutiques—bringing stories from looms to storefronts with precision.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="h-12 px-8 text-base">
+              <Button 
+                size="lg" 
+                className="h-12 px-8 text-base"
+                onClick={handleExploreJourney}
+              >
                 Explore our journey
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="h-12 border-primary-foreground/30 bg-background/10 px-8 text-base text-primary-foreground hover:bg-background/20"
+                onClick={handleMeetLeadership}
               >
                 Meet the leadership
               </Button>
@@ -127,7 +180,7 @@ const About = () => {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 py-16">
+      <section className="container mx-auto px-4 py-16" data-section="timeline">
         <div className="grid gap-12 lg:grid-cols-[1fr_1fr]">
           <div className="space-y-6">
             <h2 className="text-section-title">Our evolution</h2>
@@ -172,7 +225,7 @@ const About = () => {
         </div>
       </section>
 
-      <section className="bg-muted/40 py-16">
+      <section className="bg-muted/40 py-16" data-section="leadership">
         <div className="container mx-auto px-4">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="space-y-3">

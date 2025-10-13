@@ -45,86 +45,22 @@ const CatalogSection = () => {
   const navigate = useNavigate();
   const { addItem, setIsOpen } = useCart();
 
-  // Load local images and PDFs eagerly and pair them by normalized filename
-  const { catalogs } = useMemo(() => {
-    const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", {
-      eager: true,
-      as: "url",
-    }) as Record<string, string>;
-    const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", {
-      eager: true,
-      as: "url",
-    }) as Record<string, string>;
-
-    const pdfByKey = new Map<string, { url: string; title: string }>();
-    Object.entries(pdfModules).forEach(([path, url]) => {
-      const key = normalizeKey(path);
-      pdfByKey.set(key, { url, title: humanizeFilename(path) });
-    });
-
-    const items: CatalogCard[] = Object.entries(imageModules).map(([path, imageUrl], idx) => {
-      const key = normalizeKey(path);
-      const pdf = pdfByKey.get(key);
-      const title = humanizeFilename(path);
-      const id = `CAT${String(idx + 1).padStart(3, "0")}`;
-      return {
-        id,
-        name: title,
-        fabric: "Assorted",
-        setSize: "12 pieces",
-        category: "Sarees",
-        dispatch: "3-5 days",
-        image: imageUrl,
-        pdfUrl: pdf?.url,
-      } as CatalogCard;
-    });
-
-    return { catalogs: items };
-  }, []);
-
-  // Fetch admin-defined catalog metadata and overlay into local items by normalized title
+  // Database-only catalogs - no static file imports
   const apiQuery = useQuery({ queryKey: ["catalogs", "public", "cards"], queryFn: () => CatalogApi.list() });
-  const mergedCatalogs: CatalogCard[] = useMemo(() => {
+  const catalogs: CatalogCard[] = useMemo(() => {
     const apiCatalogs: ApiCatalog[] = apiQuery.data?.catalogs ?? [];
-    const toKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-    const byTitle = new Map<string, ApiCatalog>();
-    const byCode = new Map<string, ApiCatalog>();
-    apiCatalogs.forEach((c) => {
-      byTitle.set(toKey(c.title), c);
-      if (c.catalogCode) byCode.set(c.catalogCode, c);
-    });
-    const seen = new Set<string>();
-    const merged = catalogs.map((local) => {
-      const match = byCode.get(local.id) ?? byTitle.get(toKey(local.name));
-      if (!match) return local;
-      if (match.id) seen.add(match.id);
-      return {
-        ...local,
-        id: match.catalogCode ?? local.id,
-        fabric: match.fabric ?? local.fabric,
-        setSize: match.setSize ?? local.setSize,
-        dispatch: match.dispatch ?? local.dispatch,
-        image: match.coverImageUrl ?? local.image,
-        pdfUrl: match.pdfUrl ?? local.pdfUrl,
-      };
-    });
-
-    // Add API catalogs that didn't match a local asset (ensure they appear too)
-    const extras: CatalogCard[] = apiCatalogs
-      .filter((c) => !seen.has(c.id) && (!byCode.has(c.catalogCode ?? "") || !catalogs.some((l) => l.id === (c.catalogCode ?? ""))))
-      .map((c, idx) => ({
-        id: c.catalogCode || `CAT${String(100 + idx).padStart(3, "0")}`,
-        name: c.title,
-        fabric: c.fabric || "Assorted",
-        setSize: c.setSize || `${c.itemsCount ?? 0} pieces`,
-        category: c.category || "Sarees",
-        dispatch: c.dispatch || "3-5 days",
-        image: c.coverImageUrl || "",
-        pdfUrl: c.pdfUrl || undefined,
-      }));
-
-    return [...merged, ...extras];
-  }, [apiQuery.data, catalogs]);
+    
+    return apiCatalogs.map((c, idx) => ({
+      id: c.catalogCode || `CAT${String(idx + 1).padStart(3, "0")}`,
+      name: c.title,
+      fabric: c.fabric || "Assorted",
+      setSize: c.setSize || `${c.itemsCount ?? 0} pieces`,
+      category: c.category || "Sarees",
+      dispatch: c.dispatch || "3-5 days",
+      image: c.coverImageUrl || "",
+      pdfUrl: c.pdfUrl || undefined,
+    }));
+  }, [apiQuery.data]);
 
   return (
     <section className="py-20 bg-muted/30">
@@ -142,7 +78,7 @@ const CatalogSection = () => {
 
         {/* Catalog grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {mergedCatalogs.map((catalog) => (
+          {catalogs.map((catalog) => (
             <Card key={catalog.id} className="glass-card group hover:shadow-strong transition-all duration-300 hover:-translate-y-2">
               <CardHeader className="p-0">
                 <div className="relative overflow-hidden rounded-t-lg">

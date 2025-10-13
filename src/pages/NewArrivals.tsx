@@ -20,6 +20,10 @@ import { Separator } from "@/components/ui/separator";
 import { TrendingUp, Sparkles, CalendarDays, BellRing, Clock, Palette, ArrowUpRight } from "lucide-react";
 import ProductGrid from "@/components/ProductGrid";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { CatalogApi } from "@/lib/api";
+import { generateWhatsAppLink } from "@/lib/whatsappOrderTemplate";
+import { useToast } from "@/hooks/use-toast";
 
 const arrivalHighlights = [
   {
@@ -92,25 +96,15 @@ const humanize = (file: string) =>
     .replace(/\s*\(\d+\)\s*/g, " ")
     .trim();
 
-// Build slides: images from CatalogImages + best-effort match to PDF in Catalogs
-const buildLookbookSlides = (): LookbookSlide[] => {
-  const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", { eager: true, as: "url" }) as Record<string, string>;
-  const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
-
-  const pdfByKey = new Map<string, string>();
-  Object.entries(pdfModules).forEach(([p, url]) => {
-    const k = normalizeKey(p);
-    pdfByKey.set(k, url);
-    pdfByKey.set(k.replace(/-\d+$/, ""), url);
-  });
-
-  return Object.entries(imageModules)
-    .map(([imgPath, imgUrl]) => {
-      const key = normalizeKey(imgPath);
-      const base = key.replace(/-\d+$/, "");
-      const pdfUrl = pdfByKey.get(key) || pdfByKey.get(base);
-      return { title: humanize(imgPath), image: imgUrl, pdfUrl } as LookbookSlide;
-    })
+// Build slides from database catalogs only
+const buildLookbookSlides = (catalogs: any[]): LookbookSlide[] => {
+  return catalogs
+    .filter((c) => c.coverImageUrl && c.pdfUrl) // Only catalogs with both image and PDF
+    .map((c) => ({
+      title: c.title,
+      image: c.coverImageUrl,
+      pdfUrl: c.pdfUrl,
+    } as LookbookSlide))
     .sort((a, b) => a.title.localeCompare(b.title));
 };
 
@@ -130,7 +124,79 @@ const dropKits = [
 ];
 
 const NewArrivals = () => {
-  const lookbookSlides = useMemo(buildLookbookSlides, []);
+  const { toast } = useToast();
+
+  // Utility functions for button actions
+  const handleReserveSlots = () => {
+    const message = "Hi, I want to reserve my slots for new arrivals. Please share the reservation process and upcoming collection details.";
+    const whatsappLink = generateWhatsAppLink(message);
+    window.open(whatsappLink, "_blank");
+  };
+
+  const handleDownloadLookbookPreview = () => {
+    const catalogs = catalogsQuery.data?.catalogs || [];
+    const availableLookbooks = catalogs.filter(c => c.pdfUrl);
+    
+    if (availableLookbooks.length === 0) {
+      toast({
+        title: "No lookbooks available",
+        description: "There are currently no lookbook previews available for download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Generate a comprehensive lookbook index CSV or download the first available lookbook
+    if (availableLookbooks.length === 1) {
+      // If only one lookbook, download it directly
+      const lookbook = availableLookbooks[0];
+      const a = document.createElement("a");
+      a.href = lookbook.pdfUrl!;
+      a.download = `${lookbook.title.replace(/\s+/g, "-").toLowerCase()}-lookbook.pdf`;
+      a.click();
+      
+      toast({
+        title: "Download started",
+        description: `${lookbook.title} lookbook preview downloaded.`,
+      });
+    } else {
+      // If multiple lookbooks, create an index CSV with download links
+      const header = ["Lookbook Name", "Category", "Items Count", "PDF Download Link"];
+      const rows = availableLookbooks.map((catalog) => [
+        catalog.title || "Untitled",
+        catalog.category || "General",
+        String(catalog.itemsCount || catalog.items?.length || 0),
+        catalog.pdfUrl || "Not available"
+      ]);
+
+      const csv = [header, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `meghdoot-lookbook-previews-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+
+      toast({
+        title: "Download started",
+        description: "Lookbook preview index downloaded with direct links.",
+      });
+    }
+  };
+
+  // Fetch catalogs from database
+  const catalogsQuery = useQuery({
+    queryKey: ["catalogs", "public"],
+    queryFn: () => CatalogApi.list(),
+  });
+  
+  const lookbookSlides = useMemo(() => 
+    buildLookbookSlides(catalogsQuery.data?.catalogs ?? []), 
+    [catalogsQuery.data?.catalogs]
+  );
   return (
     <PageLayout>
       <section className="relative overflow-hidden bg-gradient-to-br from-[#101828] via-primary/95 to-[#1d2a3f] text-primary-foreground">
@@ -148,13 +214,18 @@ const NewArrivals = () => {
               Secure early access to seasonal edits that come with launch assets, merchandising strategy and assured replenishment windows.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="h-12 px-8 text-base">
+              <Button 
+                size="lg" 
+                className="h-12 px-8 text-base"
+                onClick={handleReserveSlots}
+              >
                 Reserve my slots
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="h-12 border-primary-foreground/30 bg-background/10 px-8 text-base text-primary-foreground hover:bg-background/20"
+                onClick={handleDownloadLookbookPreview}
               >
                 Download lookbook preview
               </Button>

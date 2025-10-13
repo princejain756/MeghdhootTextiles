@@ -21,6 +21,9 @@ import {
   TrendingUp,
   Truck,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { generateWhatsAppLink } from "@/lib/whatsappOrderTemplate";
+import { useToast } from "@/hooks/use-toast";
 
 const quickFilters = [
   "Ready Stock",
@@ -138,6 +141,31 @@ const insightBlocks = [
 ];
 
 const Shop = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Utility functions for button actions
+  const handleBuildMyNextDrop = () => {
+    const message = "Hi, I want to build my next drop with Meghdoot collections. Please connect me with your merchandising team for custom curation and product recommendations.";
+    const whatsappLink = generateWhatsAppLink(message);
+    window.open(whatsappLink, "_blank");
+
+    toast({
+      title: "Building your next drop",
+      description: "WhatsApp opened to connect with our merchandising team.",
+    });
+  };
+
+  const handleExploreReadyStock = () => {
+    // Navigate to catalogs page with ready stock filter
+    navigate("/catalogs?cat=all&q=ready%20stock");
+    
+    toast({
+      title: "Exploring ready stock",
+      description: "Redirected to catalogs with ready stock filter applied.",
+    });
+  };
+
   return (
     <PageLayout>
       <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-[#1d2536] text-primary-foreground">
@@ -156,13 +184,18 @@ const Shop = () => {
                 Layered lookbooks, transparent pricing and premium support for retailers, resellers and boutique founders who expect more from their suppliers.
               </p>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button size="lg" className="h-12 px-8 text-base">
+                <Button 
+                  size="lg" 
+                  className="h-12 px-8 text-base"
+                  onClick={handleBuildMyNextDrop}
+                >
                   Build my next drop
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
                   className="h-12 border-primary-foreground/30 bg-background/10 px-8 text-base text-primary-foreground hover:bg-background/20"
+                  onClick={handleExploreReadyStock}
                 >
                   Explore ready stock
                 </Button>

@@ -23,6 +23,8 @@ import type { ApiCatalog } from "@/types/api";
 import logomegh from "@/assets/logomegh.png";
 import ProductGrid from "@/components/ProductGrid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { generateWhatsAppLink } from "@/lib/whatsappOrderTemplate";
+import { useToast } from "@/hooks/use-toast";
 
 type CatalogCategory = "all" | "sarees" | "kurtis" | "fusion" | "menswear";
 
@@ -53,24 +55,68 @@ const faqItems = [
 ];
 
 const Catalogs = () => {
-  // Prefer pre-shot catalog cover images over rendering the first PDF page
-  const imageModules = import.meta.glob("/src/assets/CatalogImages/*.{png,jpg,jpeg,webp}", {
-    eager: true,
-    as: "url",
-  }) as Record<string, string>;
+  const { toast } = useToast();
 
-  // Improved normalizeKey function to better match catalog names
-  const normalizeKey = (value: string) => {
-    return value
-      .toLowerCase()
-      .replace(/^.*\//, "") // Remove path
-      .replace(/\.[a-z0-9]+$/, "") // Remove extension
-      .replace(/\s*\(\d+\)\s*/g, "") // Remove (1), (2), etc.
-      .replace(/[-_]\d+$/, "") // Remove trailing -1, _1, etc.
-      .replace(/[^a-z0-9]+/g, "-") // Replace non-alphanumeric with dash
-      .replace(/-+/g, "-") // Replace multiple dashes with single
-      .replace(/^-|-$/g, ""); // Remove leading/trailing dashes
+  // Utility functions for button actions
+  const handleAccessPremiumCatalog = () => {
+    const message = "Hi, I'm interested in accessing your premium catalog set. Please provide me with access and pricing details.";
+    const whatsappLink = generateWhatsAppLink(message);
+    window.open(whatsappLink, "_blank");
   };
+
+  const handleRequestCustomCuration = () => {
+    const message = "Hi, I would like to request custom catalog curation. Please share the requirements form and connect me with your merchandising team.";
+    const whatsappLink = generateWhatsAppLink(message);
+    window.open(whatsappLink, "_blank");
+  };
+
+  const handleSubscribeWhatsApp = () => {
+    const message = "Hi, I want to subscribe to catalog alerts via WhatsApp. Please add me to your updates list.";
+    const whatsappLink = generateWhatsAppLink(message);
+    window.open(whatsappLink, "_blank");
+  };
+
+  const handleDownloadCatalogIndex = () => {
+    // Generate a comprehensive catalog index CSV
+    const catalogs = apiCatalogs || [];
+    if (catalogs.length === 0) {
+      toast({
+        title: "No catalogs available",
+        description: "There are currently no catalogs available to download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const header = ["Catalog Name", "Category", "Status", "Downloads", "Items Count", "Created Date", "PDF Available"];
+    const rows = catalogs.map((catalog) => [
+      catalog.title || "Untitled",
+      catalog.category || "General",
+      catalog.status || "Active",
+      String(catalog.downloads || 0),
+      String(catalog.itemsCount || catalog.items?.length || 0),
+      new Date(catalog.createdAt).toLocaleDateString(),
+      catalog.pdfUrl ? "Yes" : "No"
+    ]);
+
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `meghdoot-catalog-index-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+
+    toast({
+      title: "Download started",
+      description: "Catalog index downloaded successfully.",
+    });
+  };
+
+  // Database-only catalogs - no static file imports
 
   // Simple fallback image component - no PDF rendering
   function SimpleThumb({ alt, image }: { alt: string; image?: string }) {
@@ -95,53 +141,7 @@ const Catalogs = () => {
     );
   }
 
-  // Static PDF catalogs imported from assets (build-time glob)
-  const pdfModules = import.meta.glob("/src/assets/Catalogs/*.pdf", { eager: true, as: "url" }) as Record<string, string>;
-  const staticPdfs = useMemo(() => {
-    const humanize = (file: string) =>
-      file
-        .replace(/^.*\//, "")
-        .replace(/\.[Pp][Dd][Ff]$/, "")
-        .replace(/[_-]+/g, " ")
-        .replace(/\s+/g, " ")
-        .replace(/\s*\(\d+\)\s*/g, " ")
-        .trim();
-
-    // Create better image matching
-    const imageByName = new Map<string, string>();
-    Object.entries(imageModules).forEach(([imgPath, imgUrl]) => {
-      const key = normalizeKey(imgPath);
-      imageByName.set(key, imgUrl);
-    });
-
-    return Object.entries(pdfModules)
-      .map(([path, url]) => {
-        const normalizedPdfKey = normalizeKey(path);
-        
-        // Find matching image by trying different variations
-        let image = imageByName.get(normalizedPdfKey);
-        
-        // If no direct match, try without trailing numbers and suffixes
-        if (!image) {
-          const baseName = normalizedPdfKey.replace(/-\d+$/, "").replace(/-+$/, "");
-          image = imageByName.get(baseName);
-        }
-        
-        // If still no match, try even more aggressive normalization
-        if (!image) {
-          const cleanName = normalizedPdfKey.replace(/-(1|2|3|\d+)$/, "");
-          image = imageByName.get(cleanName);
-        }
-
-        return { 
-          title: humanize(path), 
-          url, 
-          image,
-          normalizedKey: normalizedPdfKey // for debugging
-        } as { title: string; url: string; image?: string; normalizedKey?: string };
-      })
-      .sort((a, b) => a.title.localeCompare(b.title));
-  }, []);
+  // No static PDF imports - all catalogs come from database
 
   // Lightweight viewer state
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -164,32 +164,7 @@ const Catalogs = () => {
     return () => clearTimeout(id);
   }, [query]);
 
-  // Auto-open PDF preview if `pdf` query param is present
-  useEffect(() => {
-    const previewParam = searchParams.get("pdf");
-    if (!previewParam) return;
-    let decoded: string | null = null;
-    try {
-      decoded = decodeURIComponent(previewParam);
-    } catch {
-      decoded = previewParam;
-    }
-
-    // Try match by URL first, then by title
-    const byUrl = staticPdfs.find((p) => p.url === decoded);
-    if (byUrl) {
-      setActivePdf(byUrl);
-      setPdfOpen(true);
-      return;
-    }
-    const normalize = (s: string) =>
-      s.toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "").trim();
-    const byTitle = staticPdfs.find((p) => normalize(p.title) === normalize(decoded!));
-    if (byTitle) {
-      setActivePdf(byTitle);
-      setPdfOpen(true);
-    }
-  }, [searchParams, staticPdfs]);
+  // Will add PDF preview logic after featuredCatalogs is defined
 
   // Sync URL when filters change (great UX + shareable URLs)
   useEffect(() => {
@@ -232,6 +207,30 @@ const Catalogs = () => {
     }));
   }, [apiCatalogs]);
 
+  // Auto-open PDF preview for database catalogs
+  useEffect(() => {
+    const previewParam = searchParams.get("pdf");
+    if (!previewParam || !featuredCatalogs.length) return;
+    
+    let decoded: string | null = null;
+    try {
+      decoded = decodeURIComponent(previewParam);
+    } catch {
+      decoded = previewParam;
+    }
+
+    // Try match by URL or title in database catalogs
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "").trim();
+    const catalog = featuredCatalogs.find((c) => 
+      c.pdfUrl === decoded || normalize(c.title) === normalize(decoded!)
+    );
+    if (catalog?.pdfUrl) {
+      setActivePdf({ title: catalog.title, url: catalog.pdfUrl });
+      setPdfOpen(true);
+    }
+  }, [searchParams, featuredCatalogs]);
+
   const filteredCatalogs = useMemo(() => {
     return featuredCatalogs.filter((catalog) => {
       const matchesCategory = category === "all" || catalog.category === category;
@@ -240,12 +239,7 @@ const Catalogs = () => {
     });
   }, [category, debouncedQuery, featuredCatalogs]);
 
-  const filteredStaticPdfs = useMemo(() => {
-    if (!debouncedQuery) return staticPdfs;
-    return staticPdfs.filter((p) => p.title.toLowerCase().includes(debouncedQuery.toLowerCase()));
-  }, [debouncedQuery, staticPdfs]);
-
-  // Surface local PDFs as recently added featured catalogs (Sarees)
+  // Database catalogs only - no static PDF filtering needed
   type FeaturedLike = {
     title: string;
     category: CatalogCategory;
@@ -257,33 +251,14 @@ const Catalogs = () => {
     pdfUrl?: string;
     imageUrl?: string;
   };
-  const staticFeaturedCatalogs: FeaturedLike[] = useMemo(() => {
-    const nowLabel = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-    return staticPdfs.map((p) => ({
-      title: p.title,
-      category: "sarees" as CatalogCategory,
-      updated: nowLabel,
-      downloads: "0",
-      highlights: ["New catalog", "Local PDF"],
-      formats: ["PDF"],
-      items: [],
-      pdfUrl: p.url,
-      imageUrl: p.image,
-    }));
-  }, [staticPdfs]);
-
-  const allFeaturedCatalogs: FeaturedLike[] = useMemo(() => {
-    // Recently added first (local PDFs), then API results
-    return [...staticFeaturedCatalogs, ...featuredCatalogs];
-  }, [staticFeaturedCatalogs, featuredCatalogs]);
 
   const filteredAllFeatured = useMemo(() => {
-    return allFeaturedCatalogs.filter((catalog) => {
+    return featuredCatalogs.filter((catalog) => {
       const matchesCategory = category === "all" || catalog.category === category;
       const matchesQuery = catalog.title.toLowerCase().includes(debouncedQuery.toLowerCase());
       return matchesCategory && matchesQuery;
     });
-  }, [allFeaturedCatalogs, category, debouncedQuery]);
+  }, [featuredCatalogs, category, debouncedQuery]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -426,13 +401,18 @@ const Catalogs = () => {
               Filter by category, price band and dispatch readiness. Every file includes lookbooks, pricing, MOQ and marketing assets.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="h-12 px-8 text-base">
+              <Button 
+                size="lg" 
+                className="h-12 px-8 text-base"
+                onClick={handleAccessPremiumCatalog}
+              >
                 Access premium catalog set
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="h-12 border-primary-foreground/30 bg-background/10 px-8 text-base text-primary-foreground hover:bg-background/20"
+                onClick={handleRequestCustomCuration}
               >
                 Request custom curation
               </Button>
@@ -512,43 +492,7 @@ const Catalogs = () => {
           <ProductGrid category={category} search={debouncedQuery} onResultCount={setLiveCount} />
         )}
 
-        {category === "sarees" && filteredStaticPdfs.length > 0 && (
-          <div className="mt-12">
-            <div className="mb-4 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <span className="text-sm text-muted-foreground">New saree catalogs</span>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredStaticPdfs.map((pdf: { title: string; url: string; image?: string }) => (
-                <Card key={pdf.url} className="group border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="line-clamp-2 text-base leading-snug">{pdf.title}</CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">Catalog · PDF</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <SimpleThumb alt={pdf.title} image={pdf.image} />
-                  </CardContent>
-                  <CardFooter className="flex items-center justify-between gap-2 border-t bg-muted/30 px-6 py-4">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setActivePdf(pdf);
-                        setPdfOpen(true);
-                      }}
-                    >
-                      View
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <a href={pdf.url} download>
-                        Download
-                      </a>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Static PDF section removed - only showing database catalogs */}
       </section>
 
       <section id="featured" className="container mx-auto px-4 py-16">
@@ -816,13 +760,18 @@ const Catalogs = () => {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" className="h-12 px-8 text-base">
+              <Button 
+                size="lg" 
+                className="h-12 px-8 text-base"
+                onClick={handleSubscribeWhatsApp}
+              >
                 Subscribe via WhatsApp
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="h-12 border-primary-foreground/30 bg-background/10 px-8 text-base text-primary-foreground hover:bg-background/20"
+                onClick={handleDownloadCatalogIndex}
               >
                 Download catalog index
               </Button>

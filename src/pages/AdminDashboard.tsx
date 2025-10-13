@@ -14,6 +14,8 @@ import {
   Truck,
   Users,
   GripVertical,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   DndContext,
@@ -147,6 +149,8 @@ const AdminDashboard = () => {
   const [showDndHint, setShowDndHint] = useState(() => {
     return localStorage.getItem("mdthub_dnd_hint") !== "dismissed";
   });
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [showAllDetails, setShowAllDetails] = useState(false);
   type SortPref = "original" | "az" | "priceAsc" | "priceDesc" | "sku" | "shuffle";
   const [sortPref, setSortPref] = useState<SortPref>("original");
   const sensors = useSensors(
@@ -191,16 +195,7 @@ const AdminDashboard = () => {
       const imagesByKey = new Map<string, string>();
       Object.entries(imageModules).forEach(([p, u]) => imagesByKey.set(toKey(p), u));
 
-      const desiredCounts: Record<string, number> = {
-        "avantika": 8,
-        "dg-0661": 8,
-        "khadi-hand-embroidery": 4,
-        "khadi-hand-embroidery-1": 4,
-        "divine": 8,
-        "sakhi": 6,
-        "tanaya-delight-dg-0629-t": 9,
-        "skanda-supreme-dg-0566": 8,
-      };
+      const desiredCounts: Record<string, number> = {};
 
       const existingByTitle = new Set((catalogsQuery.data ?? []).map((c) => toKey(c.title)));
 
@@ -1013,7 +1008,18 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="customers" className="space-y-6">
-            <h2 className="text-xl font-semibold">Trade partners</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Trade partners</h2>
+              {usersQuery.data?.length ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllDetails(!showAllDetails)}
+                >
+                  {showAllDetails ? "Hide Details" : "Show All Details"}
+                </Button>
+              ) : null}
+            </div>
             <Card className="border shadow-sm">
               <CardContent className="p-0">
                 {usersQuery.isLoading ? (
@@ -1026,27 +1032,100 @@ const AdminDashboard = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {showAllDetails && <TableHead className="w-8"></TableHead>}
                         <TableHead>Name</TableHead>
                         <TableHead>Username</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Role</TableHead>
                         <TableHead>Joined</TableHead>
+                        {showAllDetails && (
+                          <>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Company</TableHead>
+                          </>
+                        )}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {usersQuery.data.map((customer: ApiUser) => (
-                        <TableRow key={customer.id}>
-                          <TableCell>{customer.fullName ?? "—"}</TableCell>
-                          <TableCell>{customer.username}</TableCell>
-                          <TableCell>{customer.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={customer.role === "ADMIN" ? "default" : "secondary"}>
-                              {customer.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{format(new Date(customer.createdAt), "dd MMM yyyy")}</TableCell>
-                        </TableRow>
-                      ))}
+                      {usersQuery.data.map((customer: ApiUser) => {
+                        const isExpanded = expandedUsers.has(customer.id);
+                        return (
+                          <>
+                            <TableRow key={customer.id}>
+                              {showAllDetails && (
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedUsers);
+                                      if (isExpanded) {
+                                        newExpanded.delete(customer.id);
+                                      } else {
+                                        newExpanded.add(customer.id);
+                                      }
+                                      setExpandedUsers(newExpanded);
+                                    }}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </TableCell>
+                              )}
+                              <TableCell>{customer.fullName ?? "—"}</TableCell>
+                              <TableCell>{customer.username}</TableCell>
+                              <TableCell>{customer.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={customer.role === "ADMIN" ? "default" : "secondary"}>
+                                  {customer.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{format(new Date(customer.createdAt), "dd MMM yyyy")}</TableCell>
+                              {showAllDetails && (
+                                <>
+                                  <TableCell>{customer.phone ?? "—"}</TableCell>
+                                  <TableCell>{customer.companyName ?? "—"}</TableCell>
+                                </>
+                              )}
+                            </TableRow>
+                            {showAllDetails && isExpanded && (
+                              <TableRow key={`${customer.id}-expanded`} className="bg-muted/30">
+                                <TableCell colSpan={8} className="py-4">
+                                  <div className="space-y-3">
+                                    <h4 className="text-sm font-medium">Additional Details</h4>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <span className="text-muted-foreground">User ID:</span>
+                                        <p className="font-mono text-xs mt-1">{customer.id}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Account Created:</span>
+                                        <p className="mt-1">{format(new Date(customer.createdAt), "PPP 'at' p")}</p>
+                                      </div>
+                                      {customer.phone && (
+                                        <div>
+                                          <span className="text-muted-foreground">Phone Number:</span>
+                                          <p className="mt-1">{customer.phone}</p>
+                                        </div>
+                                      )}
+                                      {customer.companyName && (
+                                        <div>
+                                          <span className="text-muted-foreground">Company Name:</span>
+                                          <p className="mt-1">{customer.companyName}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 ) : (
