@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CatalogApi } from "@/lib/api";
+import { CatalogApi, getImageUrl } from "@/lib/api";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import PageLayout from "@/components/PageLayout";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileDown, Search, Sparkles, Layers, Library, Shield, ArrowUpRight } from "lucide-react";
 import type { ApiCatalog } from "@/types/api";
+import { useAuth } from "@/context/AuthContext";
+import { ApiUtils } from "@/lib/api";
 import logomegh from "@/assets/logomegh.png";
 import ProductGrid from "@/components/ProductGrid";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -127,7 +129,7 @@ const Catalogs = () => {
         </div>
       );
     }
-    
+
     return (
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/40">
         <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
@@ -181,6 +183,7 @@ const Catalogs = () => {
   });
 
   const apiCatalogs: ApiCatalog[] = catalogsQuery.data?.catalogs ?? [];
+  const { user } = useAuth();
 
   const featuredCatalogs = useMemo(() => {
     return apiCatalogs.map((c) => ({
@@ -195,14 +198,15 @@ const Catalogs = () => {
       ],
       formats: ["PDF", "CSV"],
       pdfUrl: c.pdfUrl || undefined,
-      imageUrl: c.coverImageUrl || undefined,
+      imageUrl: getImageUrl(c.coverImageUrl) || undefined,
+      price: c.price ?? null,
       items: c.items.map((it) => ({
         name: it.product.name,
         sku: it.product.sku ?? "",
         price: it.product.price,
         currency: it.product.currency,
         categories: it.product.categories.map((cc) => cc.category.name),
-        image: it.product.images?.[0]?.url ?? "",
+        image: getImageUrl(it.product.images?.[0]?.url) ?? "",
       })),
     }));
   }, [apiCatalogs]);
@@ -211,7 +215,7 @@ const Catalogs = () => {
   useEffect(() => {
     const previewParam = searchParams.get("pdf");
     if (!previewParam || !featuredCatalogs.length) return;
-    
+
     let decoded: string | null = null;
     try {
       decoded = decodeURIComponent(previewParam);
@@ -222,7 +226,7 @@ const Catalogs = () => {
     // Try match by URL or title in database catalogs
     const normalize = (s: string) =>
       s.toLowerCase().replace(/\s+/g, " ").replace(/[^a-z0-9 ]/g, "").trim();
-    const catalog = featuredCatalogs.find((c) => 
+    const catalog = featuredCatalogs.find((c) =>
       c.pdfUrl === decoded || normalize(c.title) === normalize(decoded!)
     );
     if (catalog?.pdfUrl) {
@@ -250,6 +254,7 @@ const Catalogs = () => {
     items?: Array<unknown>;
     pdfUrl?: string;
     imageUrl?: string;
+    price?: string | null;
   };
 
   const filteredAllFeatured = useMemo(() => {
@@ -401,8 +406,8 @@ const Catalogs = () => {
               Filter by category, price band and dispatch readiness. Every file includes lookbooks, pricing, MOQ and marketing assets.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="h-12 px-8 text-base"
                 onClick={handleAccessPremiumCatalog}
               >
@@ -536,6 +541,12 @@ const Catalogs = () => {
                       <SimpleThumb alt={catalog.title} image={(catalog as any).imageUrl} />
                     </div>
                   )}
+                  {user?.role === "USER" && (catalog as any).price ? (
+                    <div className="flex items-center justify-between rounded-xl border border-dashed border-border/70 bg-muted/40 px-4 py-3">
+                      <span className="text-muted-foreground">Trade price</span>
+                      <span className="font-semibold text-foreground">{ApiUtils.formatCurrency((catalog as any).price, "INR")}</span>
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     {catalog.formats.map((format) => (
                       <Badge key={format} variant="secondary" className="rounded-full border border-dashed border-border/70">
@@ -609,7 +620,7 @@ const Catalogs = () => {
           }
         }}
       >
-        <DialogContent className="p-0 overflow-hidden w-[96vw] max-w-[1200px] h-[92vh] max-h-[92vh] grid grid-rows-[auto,1fr] gap-0">
+        <DialogContent className="p-0 overflow-hidden w-[96vw] max-w-[1200px] h-[92vh] max-h-[92vh] grid grid-rows-[auto,1fr] gap-0" aria-describedby="pdf-preview-description">
           <DialogHeader className="flex flex-row items-center justify-between px-4 py-2 border-b text-left">
             <DialogTitle className="text-base">
               {activePdf?.title}
@@ -625,6 +636,9 @@ const Catalogs = () => {
               </a>
             )}
           </DialogHeader>
+          <div id="pdf-preview-description" className="sr-only">
+            PDF catalog preview viewer
+          </div>
           <div className="h-full min-h-0 w-full">
             {activePdf && (
               <iframe
@@ -687,12 +701,43 @@ const Catalogs = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Input placeholder="Business name" className="bg-background/15 text-primary-foreground placeholder:text-primary-foreground/60" />
-                <Input placeholder="Email / WhatsApp" className="bg-background/15 text-primary-foreground placeholder:text-primary-foreground/60" />
-                <Input placeholder="Preferred category" className="bg-background/15 text-primary-foreground placeholder:text-primary-foreground/60" />
-                <Button className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                  Submit request
-                </Button>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const businessName = formData.get('businessName') as string;
+                  const contact = formData.get('contact') as string;
+                  const category = formData.get('category') as string;
+
+                  const message = `Hi, I would like to request a bespoke catalog.
+
+Business Name: ${businessName || 'Not provided'}
+Email/WhatsApp: ${contact || 'Not provided'}
+Preferred Category: ${category || 'Not provided'}
+
+Please design a personalized assortment, pricing ladder and marketing kit for my business.`;
+
+                  const whatsappLink = generateWhatsAppLink(message);
+                  window.open(whatsappLink, '_blank');
+                }} className="space-y-4">
+                  <Input
+                    name="businessName"
+                    placeholder="Business name"
+                    className="bg-background/15 text-primary-foreground placeholder:text-primary-foreground/60"
+                  />
+                  <Input
+                    name="contact"
+                    placeholder="Email / WhatsApp"
+                    className="bg-background/15 text-primary-foreground placeholder:text-primary-foreground/60"
+                  />
+                  <Input
+                    name="category"
+                    placeholder="Preferred category"
+                    className="bg-background/15 text-primary-foreground placeholder:text-primary-foreground/60"
+                  />
+                  <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+                    Submit request
+                  </Button>
+                </form>
                 <p className="text-xs text-primary-foreground/70">
                   Dedicated merchandiser responds in under 6 working hours.
                 </p>
@@ -760,8 +805,8 @@ const Catalogs = () => {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="h-12 px-8 text-base"
                 onClick={handleSubscribeWhatsApp}
               >

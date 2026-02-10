@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
@@ -40,7 +40,7 @@ import { restrictToVerticalAxis, restrictToParentElement } from "@dnd-kit/modifi
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,8 @@ import FullScreenLoader from "@/components/FullScreenLoader";
 import { useAuth } from "@/context/AuthContext";
 import { AuthApi, OrderApi, ProductApi, SupportApi, ApiUtils, CatalogApi, UploadApi } from "@/lib/api";
 import ImageUploader, { type UploaderImage } from "@/components/ImageUploader";
+import VideoUploader, { type UploaderVideo } from "@/components/VideoUploader";
+import AssetLibrary from "@/components/AssetLibrary";
 import type {
   ApiOrder,
   ApiProduct,
@@ -83,6 +85,7 @@ import type {
   SupportStatus,
   SupportTicket,
   ApiCatalog,
+  Permission,
 } from "@/types/api";
 import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -91,15 +94,17 @@ import { Progress } from "@/components/ui/progress";
 
 const productFormSchema = z.object({
   name: z.string().min(3, "Name is required"),
-  summary: z.string().optional(),
-  description: z.string().optional(),
+  summary: z.string().nullable().optional().transform(v => v ?? undefined),
+  description: z.string().nullable().optional().transform(v => v ?? undefined),
+  shippingInfo: z.string().nullable().optional().transform(v => v ?? undefined),
+  careInstructions: z.string().nullable().optional().transform(v => v ?? undefined),
   price: z.preprocess((value) => Number(value), z.number().positive("Enter a valid price")),
   stock: z.preprocess((value) => Number(value ?? 0), z.number().int().min(0)),
   currency: z.string().length(3).default("INR"),
-  categories: z.string().optional(),
+  categories: z.string().nullable().optional().transform(v => v ?? ""),
   // images handled via custom uploader
-  videoUrls: z.string().optional(),
-  sku: z.string().optional(),
+  videoUrls: z.string().nullable().optional().transform(v => v ?? undefined),
+  sku: z.string().nullable().optional().transform(v => v ?? undefined),
   featured: z.boolean().optional(),
 });
 
@@ -130,6 +135,7 @@ const AdminDashboard = () => {
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ApiProduct | null>(null);
   const [images, setImages] = useState<UploaderImage[]>([]);
+  const [videos, setVideos] = useState<UploaderVideo[]>([]);
   const [isCatalogDialogOpen, setIsCatalogDialogOpen] = useState(false);
   const [editingCatalog, setEditingCatalog] = useState<ApiCatalog | null>(null);
   const [catalogCoverUrl, setCatalogCoverUrl] = useState("");
@@ -158,26 +164,106 @@ const AdminDashboard = () => {
     useSensor(TouchSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("products");
   const [confirmDeleteCatalog, setConfirmDeleteCatalog] = useState<ApiCatalog | null>(null);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(["Sarees", "Kurtis", "Fusion", "Menswear"].slice(0, 0));
-  const presetCategories = ["Sarees", "Kurtis", "Fusion", "Menswear"];
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [respondTicketId, setRespondTicketId] = useState<string | null>(null);
   const [responseMessage, setResponseMessage] = useState("");
   const [responseStatus, setResponseStatus] = useState<SupportStatus | undefined>(undefined);
+  // User management
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [editUser, setEditUser] = useState<ApiUser | null>(null);
+
+  const permOptions: Permission[] = ["PRODUCTS", "CATALOGS", "ORDERS", "SUPPORT", "CUSTOMERS", "UPLOADS"];
+  const createUserSchema = z.object({
+    email: z.string().email(),
+    username: z.string().min(3),
+    password: z
+      .string()
+      .min(8)
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/, "Password must include upper, lower, number, and symbol"),
+    fullName: z.string().optional(),
+    phone: z.string().optional(),
+    companyName: z.string().optional(),
+    role: z.enum(["ADMIN", "USER", "UPLOADER"]).default("USER"),
+    permissions: z.array(z.string()).default([]),
+  });
+  type CreateUserForm = z.infer<typeof createUserSchema>;
+  const createUserForm = useForm<CreateUserForm>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: { email: "", username: "", password: "", fullName: "", phone: "", companyName: "", role: "USER", permissions: [] },
+  });
+  const createUserMutation = useMutation({
+    mutationFn: (values: CreateUserForm) => AuthApi.createUser(values),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["auth", "users"] });
+      setIsCreateUserOpen(false);
+      createUserForm.reset();
+      toast({ title: "User created" });
+    },
+    onError: (err) => toast({ title: "Create failed", description: String(err), variant: "destructive" }),
+  });
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, role, permissions }: { id: string; role?: string; permissions?: string[] }) =>
+      AuthApi.updateUser(id, { role, permissions }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["auth", "users"] });
+      setEditUser(null);
+      toast({ title: "Access updated" });
+    },
+    onError: (err) => toast({ title: "Update failed", description: String(err), variant: "destructive" }),
+  });
+
+  // Delivery update dialog
+  const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false);
+  const [deliveryOrderId, setDeliveryOrderId] = useState<string | null>(null);
+  const [deliveryForm, setDeliveryForm] = useState({
+    courier: "",
+    trackingNumber: "",
+    status: "Preparing",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "IN",
+    estimatedDelivery: "",
+    instructions: "",
+  });
+
+  const perms = user?.permissions ?? [];
+  const canProducts = (user?.role === "ADMIN") || perms.includes("PRODUCTS");
+  const canOrders = (user?.role === "ADMIN") || perms.includes("ORDERS");
+  const canSupport = (user?.role === "ADMIN") || perms.includes("SUPPORT");
+  const canCustomers = (user?.role === "ADMIN") || perms.includes("CUSTOMERS");
+  const canCatalogs = (user?.role === "ADMIN") || perms.includes("CATALOGS");
+  const canUploads = (user?.role === "ADMIN") || perms.includes("UPLOADS") || (user?.role === "UPLOADER");
 
   const productsQuery = useQuery({
     queryKey: ["products"],
     queryFn: () => ProductApi.list(),
     select: (response) => response.products,
-    enabled: Boolean(user),
+    enabled: Boolean(user && (canProducts || canUploads || canCatalogs || user.role === "UPLOADER" || user.role === "ADMIN")),
   });
+
+  // Build preset categories from existing products + default list
+  const presetCategories = useMemo(() => {
+    const defaultPresets = ["Sarees", "Kurtis", "Salwars", "Indo-Western", "Fabrics", "Eco And Jewellery", "Menswear"];
+    const dbCategories = new Set<string>();
+    productsQuery.data?.forEach((product) => {
+      product.categories?.forEach((c) => {
+        if (c.category?.name) dbCategories.add(c.category.name);
+      });
+    });
+    // Merge default + DB categories, deduplicated and sorted
+    return Array.from(new Set([...defaultPresets, ...dbCategories])).sort();
+  }, [productsQuery.data]);
 
   const catalogsQuery = useQuery({
     queryKey: ["catalogs"],
     queryFn: () => CatalogApi.list(),
     select: (response) => response.catalogs,
-    enabled: Boolean(user),
+    enabled: Boolean(user && (canCatalogs || canProducts || canUploads || user.role === "UPLOADER" || user.role === "ADMIN")),
   });
 
   // Helper to import local PDFs/images into DB as catalogs (admin convenience)
@@ -250,21 +336,21 @@ const AdminDashboard = () => {
     queryKey: ["orders"],
     queryFn: () => OrderApi.list(),
     select: (response) => response.orders,
-    enabled: Boolean(user),
+    enabled: Boolean(user && (user.role === "ADMIN" || canOrders)),
   });
 
   const supportQuery = useQuery({
     queryKey: ["support", "tickets"],
     queryFn: () => SupportApi.list(),
     select: (response) => response.tickets,
-    enabled: Boolean(user),
+    enabled: Boolean(user && (user.role === "ADMIN" || canSupport)),
   });
 
   const usersQuery = useQuery({
     queryKey: ["auth", "users"],
     queryFn: () => AuthApi.listUsers(),
     select: (response) => response.users,
-    enabled: Boolean(user),
+    enabled: Boolean(user && user.role === "ADMIN"),
   });
 
   const form = useForm<ProductFormValues>({
@@ -273,6 +359,8 @@ const AdminDashboard = () => {
       name: "",
       summary: "",
       description: "",
+      shippingInfo: "",
+      careInstructions: "",
       price: 0,
       stock: 0,
       currency: "INR",
@@ -283,11 +371,17 @@ const AdminDashboard = () => {
     },
   });
 
+  // PDP specifications state managed separately (ordered list of label/value)
+  type SpecItem = { label: string; value: string };
+  const [specs, setSpecs] = useState<SpecItem[]>([]);
+
   const resetProductForm = () => {
     form.reset({
       name: "",
       summary: "",
       description: "",
+      shippingInfo: "",
+      careInstructions: "",
       price: 0,
       stock: 0,
       currency: "INR",
@@ -297,6 +391,8 @@ const AdminDashboard = () => {
       featured: false,
     });
     setEditingProduct(null);
+    setSpecs([]);
+    setSelectedCategories([]);
   };
 
   const openCreateProduct = () => {
@@ -341,6 +437,8 @@ const AdminDashboard = () => {
       name: product.name,
       summary: product.summary ?? "",
       description: product.description ?? "",
+      shippingInfo: product.shippingInfo ?? "",
+      careInstructions: product.careInstructions ?? "",
       price: Number(product.price),
       stock: product.stock,
       currency: product.currency,
@@ -350,22 +448,21 @@ const AdminDashboard = () => {
       featured: product.featured,
     });
     setImages(product.images.map((img) => ({ url: img.url, alt: img.alt })));
+    // Load videos into VideoUploader (with thumbnail display)
+    setVideos((product.videos ?? []).map((video) => ({ url: video.url })));
+    // Load specs if available
+    const initialSpecs = Array.isArray(product.specs)
+      ? (product.specs as unknown as SpecItem[]).filter((s) => s && typeof s.label === "string")
+      : [];
+    setSpecs(initialSpecs);
     setEditingProduct(product);
     setIsProductDialogOpen(true);
   };
 
-  const parseCategories = (categories?: string) =>
-    Array.from(
-      new Set(
-        [
-          ...(categories
-            ?.split(",")
-            .map((item) => item.trim())
-            .filter(Boolean) ?? []),
-          ...selectedCategories,
-        ].map((c) => (c ? c : "")).filter(Boolean)
-      )
-    );
+  // Only use selectedCategories as the source of truth for categories
+  // The categories form field is deprecated and kept for backwards compatibility
+  const parseCategories = () =>
+    Array.from(new Set(selectedCategories.filter(Boolean)));
 
   const parseVideos = (videos?: string) =>
     videos
@@ -375,26 +472,38 @@ const AdminDashboard = () => {
       .map((url, index) => ({ url, position: index })) ?? [];
 
   const createProduct = useMutation({
-    mutationFn: (values: ProductFormValues) =>
-      ProductApi.create({
+    mutationFn: (values: ProductFormValues) => {
+      // Filter images to only include those with valid URLs
+      const validImages = images
+        .filter((img) => img.url && img.url.trim() !== "")
+        .map((img, index) => ({ url: img.url, alt: img.alt || undefined, position: index }));
+
+      return ProductApi.create({
         name: values.name,
-        summary: values.summary,
-        description: values.description,
+        summary: values.summary || undefined,
+        description: values.description || undefined,
+        shippingInfo: values.shippingInfo || undefined,
+        careInstructions: values.careInstructions || undefined,
+        specs: specs.length > 0 ? specs : undefined,
         price: values.price,
-        stock: values.stock,
-      currency: values.currency,
-      categories: parseCategories(values.categories),
-      images: images.map((img, index) => ({ url: img.url, alt: img.alt, position: index })),
-      videos: parseVideos(values.videoUrls),
-      sku: values.sku,
-      featured: values.featured,
-      }),
+        stock: values.stock ?? 0,
+        currency: values.currency || "INR",
+        categories: parseCategories(),
+        images: validImages.length > 0 ? validImages : undefined,
+        videos: videos.length > 0
+          ? videos.map((v, index) => ({ url: v.url, position: index }))
+          : parseVideos(values.videoUrls) || undefined,
+        sku: values.sku || undefined,
+        featured: values.featured,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       toast({ title: "Product created", description: "The catalog has been refreshed." });
       setIsProductDialogOpen(false);
       resetProductForm();
       setImages([]);
+      setVideos([]);
     },
     onError: (error) => {
       toast({ title: "Couldn't create product", description: error.message, variant: "destructive" });
@@ -406,18 +515,28 @@ const AdminDashboard = () => {
       if (!editingProduct) {
         throw new Error("No product selected for update");
       }
+      // Filter images to only include those with valid URLs
+      const validImages = images
+        .filter((img) => img.url && img.url.trim() !== "")
+        .map((img, index) => ({ url: img.url, alt: img.alt || undefined, position: index }));
+
       return ProductApi.update(editingProduct.id, {
         name: values.name,
-        summary: values.summary,
-        description: values.description,
+        summary: values.summary || undefined,
+        description: values.description || undefined,
+        shippingInfo: values.shippingInfo || undefined,
+        careInstructions: values.careInstructions || undefined,
+        specs: specs.length > 0 ? specs : undefined,
         price: values.price,
-        stock: values.stock,
-      currency: values.currency,
-      categories: parseCategories(values.categories),
-      images: images.map((img, index) => ({ url: img.url, alt: img.alt, position: index })),
-      videos: parseVideos(values.videoUrls),
-      sku: values.sku,
-      featured: values.featured,
+        stock: values.stock ?? 0,
+        currency: values.currency || "INR",
+        categories: parseCategories(),
+        images: validImages.length > 0 ? validImages : undefined,
+        videos: videos.length > 0
+          ? videos.map((v, index) => ({ url: v.url, position: index }))
+          : parseVideos(values.videoUrls) || undefined,
+        sku: values.sku || undefined,
+        featured: values.featured,
       });
     },
     onSuccess: () => {
@@ -426,6 +545,7 @@ const AdminDashboard = () => {
       setIsProductDialogOpen(false);
       resetProductForm();
       setImages([]);
+      setVideos([]);
     },
     onError: (error) => {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
@@ -444,7 +564,7 @@ const AdminDashboard = () => {
   });
 
   const createCatalogMutation = useMutation({
-    mutationFn: (values: { title: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string }) =>
+    mutationFn: (values: { title: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string; itemsCount?: number; price?: number }) =>
       CatalogApi.create(values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["catalogs"] });
@@ -456,7 +576,7 @@ const AdminDashboard = () => {
   });
 
   const updateCatalogMutation = useMutation({
-    mutationFn: (values: { title?: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string }) => {
+    mutationFn: (values: { title?: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string; itemsCount?: number; price?: number }) => {
       if (!editingCatalog) throw new Error("No catalog selected");
       return CatalogApi.update(editingCatalog.id, values);
     },
@@ -563,9 +683,19 @@ const AdminDashboard = () => {
     return <FullScreenLoader label="Loading admin controls" />;
   }
 
-  if (!user || user.role !== "ADMIN") {
+  const isAdmin = !!user && user.role === "ADMIN";
+  const isUploader = !!user && (user.role === "UPLOADER" || canUploads);
+
+  if (!user || (!isAdmin && !isUploader && !(canProducts || canCatalogs || canOrders || canSupport || canCustomers))) {
     return null;
   }
+
+  // Default tab for uploaders: focus on products
+  useEffect(() => {
+    if (isUploader && activeTab === "overview") {
+      setActiveTab("products");
+    }
+  }, [isUploader, activeTab]);
 
   const handleProductSubmit = async (values: ProductFormValues) => {
     if (editingProduct) {
@@ -575,7 +705,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCatalogSubmit = async (values: { title: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string }) => {
+  const handleCatalogSubmit = async (values: { title: string; description?: string; category?: string; catalogCode?: string; fabric?: string; setSize?: string; dispatch?: string; coverImageUrl?: string; pdfUrl?: string; itemsCount?: number; price?: number }) => {
     if (editingCatalog) {
       await updateCatalogMutation.mutateAsync(values);
     } else {
@@ -671,6 +801,30 @@ const AdminDashboard = () => {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          className="ml-2"
+          onClick={() => {
+            setDeliveryOrderId(order.id);
+            setDeliveryForm({
+              courier: order.delivery?.courier || "",
+              trackingNumber: order.delivery?.trackingNumber || "",
+              status: order.delivery?.status || "Preparing",
+              addressLine1: order.delivery?.addressLine1 || "",
+              addressLine2: order.delivery?.addressLine2 || "",
+              city: order.delivery?.city || "",
+              state: order.delivery?.state || "",
+              postalCode: order.delivery?.postalCode || "",
+              country: order.delivery?.country || "IN",
+              estimatedDelivery: order.delivery?.estimatedDelivery ? new Date(order.delivery.estimatedDelivery).toISOString().slice(0, 10) : "",
+              instructions: order.delivery?.instructions || "",
+            });
+            setDeliveryDialogOpen(true);
+          }}
+        >
+          Delivery
+        </Button>
       </TableCell>
     </TableRow>
   );
@@ -698,17 +852,22 @@ const AdminDashboard = () => {
       <TableCell>{product.stock}</TableCell>
       <TableCell>{product.featured ? "Featured" : "Standard"}</TableCell>
       <TableCell className="flex gap-2">
+        <Button asChild variant="secondary" size="sm">
+          <a href={`/products/${product.slug}`} target="_blank" rel="noopener noreferrer">View</a>
+        </Button>
         <Button variant="outline" size="sm" onClick={() => openEditProduct(product)}>
           <PenSquare className="mr-2 h-3.5 w-3.5" /> Edit
         </Button>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => deleteProduct.mutate(product.id)}
-          disabled={deleteProduct.isPending}
-        >
-          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-        </Button>
+        {user?.role === "ADMIN" && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => deleteProduct.mutate(product.id)}
+            disabled={deleteProduct.isPending}
+          >
+            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+          </Button>
+        )}
       </TableCell>
     </TableRow>
   );
@@ -736,7 +895,7 @@ const AdminDashboard = () => {
   );
 
   const hasAnyError =
-    productsQuery.isError || ordersQuery.isError || supportQuery.isError || usersQuery.isError;
+    productsQuery.isError || (isAdmin && (ordersQuery.isError || supportQuery.isError || usersQuery.isError));
 
   return (
     <PageLayout className="bg-muted/20">
@@ -757,69 +916,74 @@ const AdminDashboard = () => {
           </Alert>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {overviewMetrics.map((metric) => (
-            <Card key={metric.title} className="border shadow-sm">
-              <CardContent className="flex items-center justify-between py-5">
-                <div>
-                  <p className="text-sm text-muted-foreground">{metric.title}</p>
-                  <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
-                </div>
-                <div className={`rounded-full p-3 ${metric.tone}`}>
-                  <metric.icon className="h-5 w-5" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {user?.role === "ADMIN" && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {overviewMetrics.map((metric) => (
+              <Card key={metric.title} className="border shadow-sm">
+                <CardContent className="flex items-center justify-between py-5">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{metric.title}</p>
+                    <p className="text-3xl font-semibold text-foreground">{metric.value}</p>
+                  </div>
+                  <div className={`rounded-full p-3 ${metric.tone}`}>
+                    <metric.icon className="h-5 w-5" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="catalogs">Catalogs</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="support">Support</TabsTrigger>
-            <TabsTrigger value="customers">Customers</TabsTrigger>
+            {isAdmin && <TabsTrigger value="overview">Overview</TabsTrigger>}
+            {(isAdmin || canProducts || canUploads) && <TabsTrigger value="products">Products</TabsTrigger>}
+            {(isAdmin || canCatalogs) && <TabsTrigger value="catalogs">Catalogs</TabsTrigger>}
+            {(isAdmin || canOrders) && <TabsTrigger value="orders">Orders</TabsTrigger>}
+            {(isAdmin || canSupport) && <TabsTrigger value="support">Support</TabsTrigger>}
+            {(isAdmin || canCustomers) && <TabsTrigger value="customers">Customers</TabsTrigger>}
+            {(isAdmin || canUploads) && <TabsTrigger value="assets">Asset Library</TabsTrigger>}
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <Card className="border shadow-sm">
-              <CardHeader>
-                <CardTitle>Operations snapshot</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-xl border bg-background p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold">Order pipeline</h3>
-                  <div className="mt-4 space-y-3">
-                    {orderStatusOptions.map((status) => {
-                      const count = ordersQuery.data?.filter((order) => order.status === status).length ?? 0;
-                      return (
-                        <div key={status} className="flex items-center justify-between text-sm">
-                          <span>{status}</span>
-                          <Badge variant="secondary">{count}</Badge>
-                        </div>
-                      );
-                    })}
+          {user?.role === "ADMIN" && (
+            <TabsContent value="overview" className="space-y-6">
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle>Operations snapshot</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-xl border bg-background p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold">Order pipeline</h3>
+                    <div className="mt-4 space-y-3">
+                      {orderStatusOptions.map((status) => {
+                        const count = ordersQuery.data?.filter((order) => order.status === status).length ?? 0;
+                        return (
+                          <div key={status} className="flex items-center justify-between text-sm">
+                            <span>{status}</span>
+                            <Badge variant="secondary">{count}</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-                <div className="rounded-xl border bg-background p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold">Support load</h3>
-                  <div className="mt-4 space-y-3">
-                    {supportStatusOptions.map((status) => {
-                      const count = supportQuery.data?.filter((ticket) => ticket.status === status).length ?? 0;
-                      return (
-                        <div key={status} className="flex items-center justify-between text-sm">
-                          <span>{status}</span>
-                          <Badge variant="secondary">{count}</Badge>
-                        </div>
-                      );
-                    })}
+                  <div className="rounded-xl border bg-background p-6 shadow-sm">
+                    <h3 className="text-lg font-semibold">Support load</h3>
+                    <div className="mt-4 space-y-3">
+                      {supportStatusOptions.map((status) => {
+                        const count = supportQuery.data?.filter((ticket) => ticket.status === status).length ?? 0;
+                        return (
+                          <div key={status} className="flex items-center justify-between text-sm">
+                            <span>{status}</span>
+                            <Badge variant="secondary">{count}</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="products" className="space-y-6">
             <div className="flex items-center justify-between">
@@ -870,7 +1034,9 @@ const AdminDashboard = () => {
                 <p className="text-sm text-muted-foreground">Group products into curated sets for B2B buyers.</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={bulkImportLocal}>Import local PDFs</Button>
+                {user?.role === "ADMIN" && (
+                  <Button variant="outline" onClick={bulkImportLocal}>Import local PDFs</Button>
+                )}
                 <Button onClick={openCreateCatalog} className="gap-2">
                   <Plus className="h-4 w-4" /> New catalog
                 </Button>
@@ -917,14 +1083,16 @@ const AdminDashboard = () => {
                             <Button size="sm" onClick={() => openManageProducts(cat)}>
                               <ClipboardList className="mr-1 h-4 w-4" /> Manage items
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setConfirmDeleteCatalog(cat)}
-                              title="Delete catalog"
-                            >
-                              <Trash2 className="mr-1 h-4 w-4" /> Delete
-                            </Button>
+                            {user?.role === "ADMIN" && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setConfirmDeleteCatalog(cat)}
+                                title="Delete catalog"
+                              >
+                                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -940,203 +1108,354 @@ const AdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="orders" className="space-y-6">
-            <h2 className="text-xl font-semibold">Fulfilment queue</h2>
-            <Card className="border shadow-sm">
-              <CardContent className="p-0">
-                {ordersQuery.isLoading ? (
-                  <div className="space-y-3 p-6">
-                    {[...Array(5)].map((_, index) => (
-                      <Skeleton key={index} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : ordersQuery.data?.length ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Order</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Units</TableHead>
-                        <TableHead>Update</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>{ordersQuery.data.map(renderOrderRow)}</TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-                    <Truck className="h-8 w-8" />
-                    <p>No orders in the system yet.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {user?.role === "ADMIN" && (
+            <TabsContent value="orders" className="space-y-6">
+              <h2 className="text-xl font-semibold">Fulfilment queue</h2>
+              <Card className="border shadow-sm">
+                <CardContent className="p-0">
+                  {ordersQuery.isLoading ? (
+                    <div className="space-y-3 p-6">
+                      {[...Array(5)].map((_, index) => (
+                        <Skeleton key={index} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : ordersQuery.data?.length ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Order</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Value</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Units</TableHead>
+                          <TableHead>Update</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>{ordersQuery.data.map(renderOrderRow)}</TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                      <Truck className="h-8 w-8" />
+                      <p>No orders in the system yet.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
-          <TabsContent value="support" className="space-y-6">
-            <h2 className="text-xl font-semibold">Support service desk</h2>
-            <Card className="border shadow-sm">
-              <CardContent className="p-0">
-                {supportQuery.isLoading ? (
-                  <div className="space-y-3 p-6">
-                    {[...Array(3)].map((_, index) => (
-                      <Skeleton key={index} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : supportQuery.data?.length ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Summary</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>{supportQuery.data.map(renderSupportRow)}</TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-                    <LifeBuoy className="h-8 w-8" />
-                    <p>Support is quiet. Great job!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {user?.role === "ADMIN" && (
+            <TabsContent value="support" className="space-y-6">
+              <h2 className="text-xl font-semibold">Support service desk</h2>
+              <Card className="border shadow-sm">
+                <CardContent className="p-0">
+                  {supportQuery.isLoading ? (
+                    <div className="space-y-3 p-6">
+                      {[...Array(3)].map((_, index) => (
+                        <Skeleton key={index} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : supportQuery.data?.length ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Created</TableHead>
+                          <TableHead>Summary</TableHead>
+                          <TableHead>Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>{supportQuery.data.map(renderSupportRow)}</TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                      <LifeBuoy className="h-8 w-8" />
+                      <p>Support is quiet. Great job!</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
-          <TabsContent value="customers" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Trade partners</h2>
-              {usersQuery.data?.length ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAllDetails(!showAllDetails)}
-                >
-                  {showAllDetails ? "Hide Details" : "Show All Details"}
-                </Button>
-              ) : null}
-            </div>
-            <Card className="border shadow-sm">
-              <CardContent className="p-0">
-                {usersQuery.isLoading ? (
-                  <div className="space-y-3 p-6">
-                    {[...Array(4)].map((_, index) => (
-                      <Skeleton key={index} className="h-12 w-full" />
-                    ))}
-                  </div>
-                ) : usersQuery.data?.length ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        {showAllDetails && <TableHead className="w-8"></TableHead>}
-                        <TableHead>Name</TableHead>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Joined</TableHead>
-                        {showAllDetails && (
-                          <>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Company</TableHead>
-                          </>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {usersQuery.data.map((customer: ApiUser) => {
-                        const isExpanded = expandedUsers.has(customer.id);
-                        return (
-                          <>
-                            <TableRow key={customer.id}>
-                              {showAllDetails && (
+          {/* Asset Library Tab */}
+          {(isAdmin || canUploads) && (
+            <TabsContent value="assets" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Asset Library</h2>
+              </div>
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle>Manage Uploaded Files</CardTitle>
+                  <CardDescription>
+                    View, optimize, and delete uploaded images and videos.
+                    Images larger than 500KB and videos larger than 2MB will be marked for optimization.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AssetLibrary />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+
+          {user?.role === "ADMIN" && (
+            <TabsContent value="customers" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Trade partners</h2>
+                <div className="flex items-center gap-2">
+                  {usersQuery.data?.length ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAllDetails(!showAllDetails)}
+                    >
+                      {showAllDetails ? "Hide Details" : "Show All Details"}
+                    </Button>
+                  ) : null}
+                  {(isAdmin || canCustomers) && (
+                    <Button size="sm" onClick={() => setIsCreateUserOpen(true)}>
+                      <Plus className="mr-1 h-4 w-4" /> New user
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Card className="border shadow-sm">
+                <CardContent className="p-0">
+                  {usersQuery.isLoading ? (
+                    <div className="space-y-3 p-6">
+                      {[...Array(4)].map((_, index) => (
+                        <Skeleton key={index} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : usersQuery.data?.length ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {showAllDetails && <TableHead className="w-8"></TableHead>}
+                          <TableHead>Name</TableHead>
+                          <TableHead>Username</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Joined</TableHead>
+                          {showAllDetails && (
+                            <>
+                              <TableHead>Phone</TableHead>
+                              <TableHead>Company</TableHead>
+                            </>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {usersQuery.data.map((customer: ApiUser) => {
+                          const isExpanded = expandedUsers.has(customer.id);
+                          return (
+                            <>
+                              <TableRow key={customer.id}>
+                                {showAllDetails && (
+                                  <TableCell>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => {
+                                        const newExpanded = new Set(expandedUsers);
+                                        if (isExpanded) {
+                                          newExpanded.delete(customer.id);
+                                        } else {
+                                          newExpanded.add(customer.id);
+                                        }
+                                        setExpandedUsers(newExpanded);
+                                      }}
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4" />
+                                      )}
+                                    </Button>
+                                  </TableCell>
+                                )}
+                                <TableCell>{customer.fullName ?? "—"}</TableCell>
+                                <TableCell>{customer.username}</TableCell>
+                                <TableCell>{customer.email}</TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => {
-                                      const newExpanded = new Set(expandedUsers);
-                                      if (isExpanded) {
-                                        newExpanded.delete(customer.id);
-                                      } else {
-                                        newExpanded.add(customer.id);
-                                      }
-                                      setExpandedUsers(newExpanded);
-                                    }}
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronRight className="h-4 w-4" />
-                                    )}
-                                  </Button>
+                                  <Badge variant={customer.role === "ADMIN" ? "default" : "secondary"}>
+                                    {customer.role}
+                                  </Badge>
                                 </TableCell>
-                              )}
-                              <TableCell>{customer.fullName ?? "—"}</TableCell>
-                              <TableCell>{customer.username}</TableCell>
-                              <TableCell>{customer.email}</TableCell>
-                              <TableCell>
-                                <Badge variant={customer.role === "ADMIN" ? "default" : "secondary"}>
-                                  {customer.role}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{format(new Date(customer.createdAt), "dd MMM yyyy")}</TableCell>
-                              {showAllDetails && (
-                                <>
-                                  <TableCell>{customer.phone ?? "—"}</TableCell>
-                                  <TableCell>{customer.companyName ?? "—"}</TableCell>
-                                </>
-                              )}
-                            </TableRow>
-                            {showAllDetails && isExpanded && (
-                              <TableRow key={`${customer.id}-expanded`} className="bg-muted/30">
-                                <TableCell colSpan={8} className="py-4">
-                                  <div className="space-y-3">
-                                    <h4 className="text-sm font-medium">Additional Details</h4>
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                      <div>
-                                        <span className="text-muted-foreground">User ID:</span>
-                                        <p className="font-mono text-xs mt-1">{customer.id}</p>
-                                      </div>
-                                      <div>
-                                        <span className="text-muted-foreground">Account Created:</span>
-                                        <p className="mt-1">{format(new Date(customer.createdAt), "PPP 'at' p")}</p>
-                                      </div>
-                                      {customer.phone && (
-                                        <div>
-                                          <span className="text-muted-foreground">Phone Number:</span>
-                                          <p className="mt-1">{customer.phone}</p>
-                                        </div>
-                                      )}
-                                      {customer.companyName && (
-                                        <div>
-                                          <span className="text-muted-foreground">Company Name:</span>
-                                          <p className="mt-1">{customer.companyName}</p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </TableCell>
+                                <TableCell>{format(new Date(customer.createdAt), "dd MMM yyyy")}</TableCell>
+                                {showAllDetails && (
+                                  <>
+                                    <TableCell>{customer.phone ?? "—"}</TableCell>
+                                    <TableCell>{customer.companyName ?? "—"}</TableCell>
+                                  </>
+                                )}
                               </TableRow>
-                            )}
-                          </>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
-                    <Users className="h-8 w-8" />
-                    <p>No partners yet. Registrations will appear here.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                              {showAllDetails && isExpanded && (
+                                <TableRow key={`${customer.id}-expanded`} className="bg-muted/30">
+                                  <TableCell colSpan={8} className="py-4">
+                                    <div className="space-y-3">
+                                      <h4 className="text-sm font-medium">Additional Details</h4>
+                                      <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                          <span className="text-muted-foreground">User ID:</span>
+                                          <p className="font-mono text-xs mt-1">{customer.id}</p>
+                                        </div>
+                                        <div>
+                                          <span className="text-muted-foreground">Account Created:</span>
+                                          <p className="mt-1">{format(new Date(customer.createdAt), "PPP 'at' p")}</p>
+                                        </div>
+                                        {customer.phone && (
+                                          <div>
+                                            <span className="text-muted-foreground">Phone Number:</span>
+                                            <p className="mt-1">{customer.phone}</p>
+                                          </div>
+                                        )}
+                                        {customer.companyName && (
+                                          <div>
+                                            <span className="text-muted-foreground">Company Name:</span>
+                                            <p className="mt-1">{customer.companyName}</p>
+                                          </div>
+                                        )}
+                                        {customer.address && (
+                                          <div className="col-span-2">
+                                            <span className="text-muted-foreground">Business Address:</span>
+                                            <p className="mt-1">
+                                              {customer.address.line1}
+                                              {customer.address.line2 ? `, ${customer.address.line2}` : ""}, {customer.address.city}, {customer.address.state} {customer.address.postalCode}, {customer.address.country}
+                                            </p>
+                                          </div>
+                                        )}
+                                        {customer.tradeProfile && (
+                                          <div className="col-span-2 grid grid-cols-2 gap-4">
+                                            <div>
+                                              <span className="text-muted-foreground">GST Number:</span>
+                                              <p className="mt-1">{customer.tradeProfile.gstNumber || "—"}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Business Type:</span>
+                                              <p className="mt-1">{customer.tradeProfile.businessType || "—"}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Annual Turnover:</span>
+                                              <p className="mt-1">{customer.tradeProfile.annualTurnover || "—"}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Years in Business:</span>
+                                              <p className="mt-1">{customer.tradeProfile.experience || "—"}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Product Interest:</span>
+                                              <p className="mt-1">{customer.tradeProfile.productInterest || "—"}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Website:</span>
+                                              <p className="mt-1">
+                                                {customer.tradeProfile.website ? (
+                                                  <a href={customer.tradeProfile.website} target="_blank" rel="noreferrer" className="underline">
+                                                    {customer.tradeProfile.website}
+                                                  </a>
+                                                ) : (
+                                                  "—"
+                                                )}
+                                              </p>
+                                            </div>
+                                            <div className="col-span-2">
+                                              <span className="text-muted-foreground">Additional Info:</span>
+                                              <p className="mt-1 whitespace-pre-wrap">{customer.tradeProfile.additionalInfo || "—"}</p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Verified:</span>
+                                              <p className="mt-1">
+                                                {customer.tradeProfile.verified ? (
+                                                  <span className="inline-flex items-center gap-1 text-green-600"><CheckCircle className="h-4 w-4" /> Verified</span>
+                                                ) : (
+                                                  <span className="text-amber-600">Pending</span>
+                                                )}
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <span className="text-muted-foreground">Terms Accepted:</span>
+                                              <p className="mt-1">{customer.tradeProfile.termsAcceptedAt ? format(new Date(customer.tradeProfile.termsAcceptedAt), "dd MMM yyyy") : "—"}</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                        {(isAdmin || canCustomers) && (
+                                          <div className="col-span-2 flex flex-wrap gap-2">
+                                            <Button size="sm" variant="outline" onClick={() => setEditUser(customer)}>
+                                              Manage access
+                                            </Button>
+                                            {customer.tradeProfile && (
+                                              <Button
+                                                size="sm"
+                                                variant={customer.tradeProfile.verified ? "secondary" : "default"}
+                                                onClick={async () => {
+                                                  try {
+                                                    await AuthApi.setTradeVerification(customer.id, !customer.tradeProfile?.verified);
+                                                    await queryClient.invalidateQueries({ queryKey: ["auth", "users"] });
+                                                  } catch (e) {
+                                                    toast({ title: "Failed", description: String(e), variant: "destructive" });
+                                                  }
+                                                }}
+                                              >
+                                                {customer.tradeProfile.verified ? "Unverify" : "Verify trade partner"}
+                                              </Button>
+                                            )}
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={async () => {
+                                                try {
+                                                  const res = await AuthApi.resetUserPassword(customer.id);
+                                                  await navigator.clipboard.writeText(res.tempPassword);
+                                                  toast({ title: "Temporary password generated", description: "Copied to clipboard" });
+                                                } catch (e) {
+                                                  toast({ title: "Failed to reset password", description: String(e), variant: "destructive" });
+                                                }
+                                              }}
+                                            >
+                                              Reset password
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              variant="destructive"
+                                              onClick={async () => {
+                                                if (!confirm("Delete this user? This cannot be undone and only works for users without orders/tickets.")) return;
+                                                try {
+                                                  await AuthApi.deleteUser(customer.id);
+                                                  await queryClient.invalidateQueries({ queryKey: ["auth", "users"] });
+                                                  toast({ title: "User deleted" });
+                                                } catch (e) {
+                                                  toast({ title: "Delete failed", description: String(e), variant: "destructive" });
+                                                }
+                                              }}
+                                            >
+                                              Delete user
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                      <Users className="h-8 w-8" />
+                      <p>No partners yet. Registrations will appear here.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
 
         <Dialog open={isProductDialogOpen} onOpenChange={(open) => {
@@ -1144,6 +1463,8 @@ const AdminDashboard = () => {
           if (!open) {
             resetProductForm();
             setImages([]);
+            setVideos([]);
+            setSpecs([]);
           }
         }}>
           <DialogContent className="max-w-2xl">
@@ -1209,6 +1530,34 @@ const AdminDashboard = () => {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="shippingInfo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Shipping information</FormLabel>
+                      <FormControl>
+                        <Textarea rows={3} placeholder="Dispatch timelines, GST invoice, pan-India shipping, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="careInstructions"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Care instructions</FormLabel>
+                      <FormControl>
+                        <Textarea rows={3} placeholder="Care and maintenance guidance for the product" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid gap-4 sm:grid-cols-3">
                   <FormField
                     control={form.control}
@@ -1251,51 +1600,108 @@ const AdminDashboard = () => {
                   />
                 </div>
 
-                <div className="grid gap-2">
-                  <div className="flex items-end justify-between gap-2">
-                    <FormField
-                      control={form.control}
-                      name="categories"
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormLabel>Additional categories</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Festive, Premium" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                {/* Categories section */}
+                <div className="grid gap-3">
+                  <Label>Categories</Label>
+                  <div className="flex items-center gap-3">
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="outline" className="justify-between min-w-[180px]">
+                          {selectedCategories.length > 0
+                            ? `${selectedCategories.length} selected`
+                            : "Select categories"}
+                          <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto z-[9999]" sideOffset={5}>
+                        {presetCategories.map((cat) => (
+                          <DropdownMenuCheckboxItem
+                            key={cat}
+                            checked={selectedCategories.includes(cat)}
+                            onCheckedChange={(checked) => {
+                              setSelectedCategories((prev) => {
+                                const set = new Set(prev);
+                                if (checked) set.add(cat);
+                                else set.delete(cat);
+                                return Array.from(set);
+                              });
+                            }}
+                          >
+                            {cat}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    {selectedCategories.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedCategories([])}
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                  </div>
+                  {/* Custom categories input */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="customCategories"
+                      placeholder="Add custom categories (comma-separated)"
+                      className="flex-1"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const input = e.currentTarget;
+                          const newCats = input.value
+                            .split(",")
+                            .map((c) => c.trim())
+                            .filter((c) => c.length > 0);
+                          if (newCats.length > 0) {
+                            setSelectedCategories((prev) =>
+                              Array.from(new Set([...prev, ...newCats]))
+                            );
+                            input.value = "";
+                          }
+                        }
+                      }}
                     />
-                    <div className="pt-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="outline">Choose from presets</Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                          {presetCategories.map((opt) => (
-                            <DropdownMenuCheckboxItem
-                              key={opt}
-                              checked={selectedCategories.includes(opt)}
-                              onCheckedChange={(checked) => {
-                                setSelectedCategories((prev) => {
-                                  const set = new Set(prev);
-                                  if (checked) set.add(opt); else set.delete(opt);
-                                  return Array.from(set);
-                                });
-                              }}
-                            >
-                              {opt}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        const input = document.getElementById("customCategories") as HTMLInputElement;
+                        if (!input) return;
+                        const newCats = input.value
+                          .split(",")
+                          .map((c) => c.trim())
+                          .filter((c) => c.length > 0);
+                        if (newCats.length > 0) {
+                          setSelectedCategories((prev) =>
+                            Array.from(new Set([...prev, ...newCats]))
+                          );
+                          input.value = "";
+                        }
+                      }}
+                    >
+                      Add
+                    </Button>
                   </div>
                   {selectedCategories.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {selectedCategories.map((cat) => (
-                        <Badge key={cat} variant="secondary" className="rounded-full">
-                          {cat}
+                        <Badge
+                          key={cat}
+                          variant="secondary"
+                          className="rounded-full cursor-pointer"
+                          onClick={() => {
+                            setSelectedCategories((prev) =>
+                              prev.filter((c) => c !== cat)
+                            );
+                          }}
+                        >
+                          {cat} ×
                         </Badge>
                       ))}
                     </div>
@@ -1303,6 +1709,56 @@ const AdminDashboard = () => {
                 </div>
 
                 <ImageUploader value={images} onChange={setImages} max={8} />
+
+                <VideoUploader value={videos} onChange={setVideos} max={4} />
+
+                {/* PDP Specifications editor */}
+                <div className="space-y-2">
+                  <Label>Specifications</Label>
+                  <div className="space-y-2">
+                    {specs.map((spec, idx) => (
+                      <div key={idx} className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+                        <Input
+                          className="sm:col-span-2"
+                          placeholder="Label (e.g., Fabric)"
+                          value={spec.label}
+                          onChange={(e) => {
+                            const next = specs.slice();
+                            next[idx] = { ...next[idx], label: e.target.value };
+                            setSpecs(next);
+                          }}
+                        />
+                        <Input
+                          className="sm:col-span-3"
+                          placeholder="Value (e.g., Pure Silk)"
+                          value={spec.value}
+                          onChange={(e) => {
+                            const next = specs.slice();
+                            next[idx] = { ...next[idx], value: e.target.value };
+                            setSpecs(next);
+                          }}
+                        />
+                        <div className="flex justify-end sm:col-span-5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="text-rose-600 hover:text-rose-700"
+                            onClick={() => setSpecs((prev) => prev.filter((_, i) => i !== idx))}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSpecs((prev) => [...prev, { label: "", value: "" }])}
+                  >
+                    Add specification
+                  </Button>
+                </div>
 
                 <FormField
                   control={form.control}
@@ -1355,6 +1811,85 @@ const AdminDashboard = () => {
             </Form>
           </DialogContent>
         </Dialog>
+        {/* Delivery dialog */}
+        <Dialog open={deliveryDialogOpen} onOpenChange={setDeliveryDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update delivery</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Courier</Label>
+                  <Input value={deliveryForm.courier} onChange={(e) => setDeliveryForm({ ...deliveryForm, courier: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Tracking #</Label>
+                  <Input value={deliveryForm.trackingNumber} onChange={(e) => setDeliveryForm({ ...deliveryForm, trackingNumber: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Status</Label>
+                  <Input value={deliveryForm.status} onChange={(e) => setDeliveryForm({ ...deliveryForm, status: e.target.value })} />
+                </div>
+                <div>
+                  <Label>ETA (yyyy-mm-dd)</Label>
+                  <Input type="date" value={deliveryForm.estimatedDelivery} onChange={(e) => setDeliveryForm({ ...deliveryForm, estimatedDelivery: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <Label>Address line 1</Label>
+                <Input value={deliveryForm.addressLine1} onChange={(e) => setDeliveryForm({ ...deliveryForm, addressLine1: e.target.value })} />
+              </div>
+              <div>
+                <Label>Address line 2</Label>
+                <Input value={deliveryForm.addressLine2} onChange={(e) => setDeliveryForm({ ...deliveryForm, addressLine2: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>City</Label>
+                  <Input value={deliveryForm.city} onChange={(e) => setDeliveryForm({ ...deliveryForm, city: e.target.value })} />
+                </div>
+                <div>
+                  <Label>State</Label>
+                  <Input value={deliveryForm.state} onChange={(e) => setDeliveryForm({ ...deliveryForm, state: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Pincode</Label>
+                  <Input value={deliveryForm.postalCode} onChange={(e) => setDeliveryForm({ ...deliveryForm, postalCode: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <Label>Country</Label>
+                <Input value={deliveryForm.country} onChange={(e) => setDeliveryForm({ ...deliveryForm, country: e.target.value })} />
+              </div>
+              <div>
+                <Label>Instructions</Label>
+                <Textarea rows={3} value={deliveryForm.instructions} onChange={(e) => setDeliveryForm({ ...deliveryForm, instructions: e.target.value })} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  if (!deliveryOrderId) return;
+                  const payload = {
+                    delivery: {
+                      ...deliveryForm,
+                      estimatedDelivery: deliveryForm.estimatedDelivery ? new Date(deliveryForm.estimatedDelivery).toISOString() : undefined,
+                    },
+                  } as any;
+                  OrderApi.upsertDelivery(deliveryOrderId, payload.delivery).then(() => {
+                    queryClient.invalidateQueries({ queryKey: ["orders"] });
+                    setDeliveryDialogOpen(false);
+                  });
+                }}
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Create/Update Catalog dialog */}
         <Dialog
@@ -1388,6 +1923,7 @@ const AdminDashboard = () => {
                   coverImageUrl: (String(fd.get("coverImageUrl") ?? "") || undefined) ?? (catalogCoverUrl || undefined),
                   pdfUrl: (String(fd.get("pdfUrl") ?? "") || undefined) ?? (catalogPdfUrl || undefined),
                   itemsCount: Number(String(fd.get("itemsCount") ?? "")) || undefined,
+                  price: Number(String(fd.get("price") ?? "")) || undefined,
                 };
                 await handleCatalogSubmit(payload);
               }}
@@ -1472,6 +2008,11 @@ const AdminDashboard = () => {
                   <Label htmlFor="itemsCount">Products in catalog</Label>
                   <Input id="itemsCount" name="itemsCount" type="number" min={0} placeholder="e.g. 8" defaultValue={editingCatalog?.itemsCount ?? ""} />
                   <p className="text-xs text-muted-foreground">Used to show “8 styles selected” when products aren’t linked yet.</p>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="price">Catalog price (INR)</Label>
+                  <Input id="price" name="price" type="number" step="0.01" min={0} placeholder="e.g. 999" defaultValue={(editingCatalog?.price ? Number(editingCatalog.price) : "") as any} />
+                  <p className="text-xs text-muted-foreground">Visible to trade users only on storefront.</p>
                 </div>
               </div>
               <div className="grid gap-2">
@@ -1749,6 +2290,157 @@ const AdminDashboard = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        {/* Create user dialog */}
+        <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create user</DialogTitle>
+            </DialogHeader>
+            <Form {...createUserForm}>
+              <form onSubmit={createUserForm.handleSubmit((v) => createUserMutation.mutate(v))} className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField name="email" control={createUserForm.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl><Input type="email" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField name="username" control={createUserForm.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField name="password" control={createUserForm.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl><Input type="password" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  <FormField name="role" control={createUserForm.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger><SelectValue placeholder="Role" /></SelectTrigger>
+                        <SelectContent>
+                          {["USER", "UPLOADER", "ADMIN"].map((r) => (<SelectItem key={r} value={r}>{r}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField name="fullName" control={createUserForm.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full name</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField name="phone" control={createUserForm.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl><Input {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+                <FormField name="companyName" control={createUserForm.control} render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                  </FormItem>
+                )} />
+                <div className="space-y-2">
+                  <FormLabel>Module access</FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {permOptions.map((p) => {
+                      const selected = createUserForm.watch("permissions").includes(p);
+                      return (
+                        <Button
+                          key={p}
+                          type="button"
+                          variant={selected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const cur = new Set(createUserForm.getValues("permissions"));
+                            if (cur.has(p)) cur.delete(p); else cur.add(p);
+                            createUserForm.setValue("permissions", Array.from(cur));
+                          }}
+                        >
+                          {p}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={createUserMutation.isPending}>
+                    {createUserMutation.isPending ? "Creating…" : "Create"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit user access dialog */}
+        <Dialog open={Boolean(editUser)} onOpenChange={(open) => { if (!open) setEditUser(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Manage access {editUser ? `— ${editUser.username}` : ""}</DialogTitle>
+            </DialogHeader>
+            {editUser && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Role</Label>
+                  <Select defaultValue={editUser.role} onValueChange={(val) => updateUserMutation.mutate({ id: editUser.id, role: val })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["USER", "UPLOADER", "ADMIN"].map((r) => (<SelectItem key={r} value={r}>{r}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Module access</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {permOptions.map((p) => {
+                      const selected = (editUser.permissions ?? []).includes(p);
+                      return (
+                        <Button
+                          key={p}
+                          type="button"
+                          variant={selected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            const set = new Set(editUser.permissions ?? []);
+                            if (set.has(p)) set.delete(p); else set.add(p);
+                            const permissions = Array.from(set);
+                            setEditUser({ ...editUser, permissions });
+                          }}
+                        >
+                          {p}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={() => editUser && updateUserMutation.mutate({ id: editUser.id, permissions: editUser.permissions })}
+                    disabled={updateUserMutation.isPending}
+                  >
+                    {updateUserMutation.isPending ? "Saving…" : "Save"}
+                  </Button>
+                </DialogFooter>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </PageLayout>
   );

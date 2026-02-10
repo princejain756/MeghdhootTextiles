@@ -5,7 +5,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import sareesImage from "@/assets/forsaree.jpeg";
 import salwarImage from "@/assets/salwarsuitsfor.webp";
 import { Link } from "react-router-dom";
-import kurtisImage from "@/assets/forkurtas.webp";
+// Removed Kurtis card from home categories
 
 const CategoriesSection = () => {
   const categories = [
@@ -21,20 +21,11 @@ const CategoriesSection = () => {
     {
       name: "Salwar Suits",
       description: "Elegant suits and dress materials in latest designs",
-      catalogCount: "120+ Catalogs",
+      catalogCount: "Coming Soon",
       popular: true,
       image: salwarImage,
       gradient: "from-blue-500/20 to-cyan-500/20",
       categoryParam: "fusion", // Assuming salwar suits are under fusion category
-    },
-    {
-      name: "Kurtis",
-      description: "Casual and formal kurtis in cotton, rayon, and silk",
-      catalogCount: "25+ Catalogs",
-      popular: false,
-      image: kurtisImage,
-      gradient: "from-green-500/20 to-emerald-500/20",
-      categoryParam: "kurtis",
     },
   ];
 

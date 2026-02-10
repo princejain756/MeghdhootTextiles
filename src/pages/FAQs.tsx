@@ -5,12 +5,12 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { 
-  HelpCircle, 
-  Search, 
-  MessageSquare, 
-  Phone, 
-  Mail, 
+import {
+  HelpCircle,
+  Search,
+  MessageSquare,
+  Phone,
+  Mail,
   MapPin,
   Users,
   Star,
@@ -74,7 +74,7 @@ const FAQs = () => {
       },
       {
         question: "Do you have a physical store?",
-        answer: "Yes, we have our main operations center in Surat, Gujarat. You can visit us at Kamela Darwaja, Umarwada, Ring Road (Opp. Millennium Textile Market Back Gate), Surat – 395002. We also have showrooms in select cities for trade customers."
+        answer: "Yes, you can visit our Bengaluru showroom at No.82, J M Road, Avenue Road cross, Bangalore - 560002. We also have showrooms in select cities for trade customers."
       },
       {
         question: "What are your business hours?",
@@ -194,7 +194,7 @@ const FAQs = () => {
   };
 
   const filteredFAQs = Object.entries(faqData).reduce((acc, [category, faqs]) => {
-    const filtered = faqs.filter(faq => 
+    const filtered = faqs.filter(faq =>
       faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -206,8 +206,8 @@ const FAQs = () => {
 
   const contactInfo = {
     email: "support@meghdoottextiles.com",
-    phone: "+91 93425 03401",
-    address: "Kamela Darwaja, Umarwada, Ring Road, Surat – 395002, Gujarat, India"
+    phone: "+91 8088525639",
+    address: "No.82, J M Road, Avenue Road cross, Bangalore - 560002"
   };
 
   return (
@@ -275,7 +275,7 @@ const FAQs = () => {
               <h2 className="text-2xl font-bold mb-4">Browse by Category</h2>
               <p className="text-muted-foreground">Select a category to view related questions</p>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {faqCategories.map((category) => (
                 <Button
@@ -307,11 +307,11 @@ const FAQs = () => {
                       {faqs.length} questions
                     </Badge>
                   </div>
-                  
+
                   <Accordion type="single" collapsible className="space-y-4">
                     {faqs.map((faq, index) => (
-                      <AccordionItem 
-                        key={index} 
+                      <AccordionItem
+                        key={index}
                         value={`${categoryKey}-${index}`}
                         className="border border-border rounded-lg"
                       >
@@ -360,7 +360,7 @@ const FAQs = () => {
                   Can't find what you're looking for? Our support team is here to help you 24/7.
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
@@ -371,7 +371,7 @@ const FAQs = () => {
                   <h3 className="font-semibold mb-2">Email Us</h3>
                   <p className="text-sm text-primary-foreground/80">{contactInfo.email}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <div className="p-3 bg-white/10 rounded-full">
@@ -381,7 +381,7 @@ const FAQs = () => {
                   <h3 className="font-semibold mb-2">Call Us</h3>
                   <p className="text-sm text-primary-foreground/80">{contactInfo.phone}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <div className="p-3 bg-white/10 rounded-full">

@@ -1,4 +1,8 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,14 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Building2, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  FileText, 
-  Shield, 
+import {
+  Building2,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  FileText,
+  Shield,
   CheckCircle,
   Star,
   Award,
@@ -24,35 +28,115 @@ import {
   TrendingUp
 } from "lucide-react";
 import PageLayout from "@/components/PageLayout";
+import { useAuth } from "@/context/AuthContext";
+import FullScreenLoader from "@/components/FullScreenLoader";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-const TradeAccount = () => {
-  const [formData, setFormData] = useState({
-    businessName: "",
-    contactPerson: "",
-    email: "",
-    phone: "",
-    gstNumber: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    businessType: "",
-    annualTurnover: "",
-    productInterest: "",
-    experience: "",
-    website: "",
-    additionalInfo: "",
-    termsAccepted: false
+const passwordRequirements =
+  "Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.";
+
+const tradeRegisterSchema = z
+  .object({
+    businessName: z.string().min(2, "Enter your business name"),
+    contactPerson: z.string().min(3, "Enter the contact person's name"),
+    email: z.string().email("Enter a valid email"),
+    phone: z.string().min(10, "Enter a valid phone number"),
+    gstNumber: z.string().optional(),
+    address: z.string().min(5, "Enter your business address"),
+    city: z.string().min(2, "Enter city"),
+    state: z.string().min(2, "Enter state"),
+    pincode: z.string().min(4, "Enter pincode"),
+    businessType: z.string().min(2, "Enter business type"),
+    annualTurnover: z.string().optional(),
+    productInterest: z.string().optional(),
+    experience: z.string().optional(),
+    website: z.string().url("Enter a valid URL").optional().or(z.literal("").transform(() => undefined)),
+    additionalInfo: z.string().optional(),
+    termsAccepted: z.literal(true, { errorMap: () => ({ message: "You must accept Terms & Privacy" }) }),
+
+    // Account credentials
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z
+      .string()
+      .min(8, passwordRequirements)
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/, passwordRequirements),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match",
   });
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+type TradeRegisterFormValues = z.infer<typeof tradeRegisterSchema>;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log("Trade account form submitted:", formData);
+const TradeAccount = () => {
+  const { user, register: registerMutation, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  const form = useForm<TradeRegisterFormValues>({
+    resolver: zodResolver(tradeRegisterSchema),
+    defaultValues: {
+      businessName: "",
+      contactPerson: "",
+      email: "",
+      phone: "",
+      gstNumber: "",
+      address: "",
+      city: "",
+      state: "",
+      pincode: "",
+      businessType: "",
+      annualTurnover: "",
+      productInterest: "",
+      experience: "",
+      website: "",
+      additionalInfo: "",
+      termsAccepted: false,
+      username: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === "ADMIN" || user.role === "UPLOADER" ? "/admin" : "/dashboard", { replace: true });
+    }
+  }, [navigate, user]);
+
+  if (isLoading) {
+    return <FullScreenLoader label="Preparing Trade Hub" />;
+  }
+
+  const onSubmit = async (values: TradeRegisterFormValues) => {
+    try {
+      await registerMutation.mutateAsync({
+        email: values.email,
+        username: values.username,
+        password: values.password,
+        fullName: values.contactPerson,
+        companyName: values.businessName,
+        phone: values.phone,
+        // Address
+        addressLine1: values.address,
+        city: values.city,
+        state: values.state,
+        postalCode: values.pincode,
+        country: "IN",
+        // Trade profile
+        gstNumber: values.gstNumber || undefined,
+        businessType: values.businessType,
+        annualTurnover: values.annualTurnover || undefined,
+        productInterest: values.productInterest || undefined,
+        experience: values.experience || undefined,
+        website: values.website || undefined,
+        additionalInfo: values.additionalInfo || undefined,
+        termsAccepted: values.termsAccepted,
+      });
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const benefits = [
@@ -188,233 +272,343 @@ const TradeAccount = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Business Details */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Building2 className="h-5 w-5" />
-                        Business Details
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="businessName">Business Name *</Label>
-                          <Input
-                            id="businessName"
-                            value={formData.businessName}
-                            onChange={(e) => handleInputChange("businessName", e.target.value)}
-                            placeholder="Enter your business name"
-                            required
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      {/* Business Details */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Building2 className="h-5 w-5" />
+                          Business Details
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="businessName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Business Name *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Enter your business name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="contactPerson"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Contact Person *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Full name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="contactPerson">Contact Person *</Label>
-                          <Input
-                            id="contactPerson"
-                            value={formData.contactPerson}
-                            onChange={(e) => handleInputChange("contactPerson", e.target.value)}
-                            placeholder="Full name"
-                            required
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email Address *</FormLabel>
+                                <FormControl>
+                                  <Input type="email" placeholder="business@example.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="phone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Phone Number *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="+91 98765 43210" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="gstNumber"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>GST Number</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="29AACCM6639C1ZF" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="businessType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Business Type *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Retailer, Wholesaler, etc." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address *</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => handleInputChange("email", e.target.value)}
-                            placeholder="business@example.com"
-                            required
+                      <Separator />
+
+                      {/* Address Details */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <MapPin className="h-5 w-5" />
+                          Business Address
+                        </h3>
+
+                        <FormField
+                          control={form.control}
+                          name="address"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Address *</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Complete business address" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="city"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>City *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="City" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number *</Label>
-                          <Input
-                            id="phone"
-                            value={formData.phone}
-                            onChange={(e) => handleInputChange("phone", e.target.value)}
-                            placeholder="+91 98765 43210"
-                            required
+                          <FormField
+                            control={form.control}
+                            name="state"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>State *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="State" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="pincode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pincode *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="123456" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="gstNumber">GST Number *</Label>
-                          <Input
-                            id="gstNumber"
-                            value={formData.gstNumber}
-                            onChange={(e) => handleInputChange("gstNumber", e.target.value)}
-                            placeholder="24AACCM6639C1ZP"
-                            required
+                      <Separator />
+
+                      {/* Business Information */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Additional Information
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="annualTurnover"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Annual Turnover</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="₹10 Lakhs - ₹1 Crore" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="experience"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Years in Business</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="5+ years" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="businessType">Business Type *</Label>
-                          <Input
-                            id="businessType"
-                            value={formData.businessType}
-                            onChange={(e) => handleInputChange("businessType", e.target.value)}
-                            placeholder="Retailer, Wholesaler, etc."
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
 
-                    <Separator />
+                        <FormField
+                          control={form.control}
+                          name="productInterest"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Product Interest</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Sarees, Lehengas, Kurtis, etc." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                    {/* Address Details */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <MapPin className="h-5 w-5" />
-                        Business Address
-                      </h3>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Address *</Label>
-                        <Textarea
-                          id="address"
-                          value={formData.address}
-                          onChange={(e) => handleInputChange("address", e.target.value)}
-                          placeholder="Complete business address"
-                          required
+                        <FormField
+                          control={form.control}
+                          name="website"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Website (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="https://yourwebsite.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="additionalInfo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Additional Information</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Tell us more about your business and requirements..." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="city">City *</Label>
-                          <Input
-                            id="city"
-                            value={formData.city}
-                            onChange={(e) => handleInputChange("city", e.target.value)}
-                            placeholder="City"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="state">State *</Label>
-                          <Input
-                            id="state"
-                            value={formData.state}
-                            onChange={(e) => handleInputChange("state", e.target.value)}
-                            placeholder="State"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="pincode">Pincode *</Label>
-                          <Input
-                            id="pincode"
-                            value={formData.pincode}
-                            onChange={(e) => handleInputChange("pincode", e.target.value)}
-                            placeholder="123456"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
+                      <Separator />
 
-                    <Separator />
-
-                    {/* Business Information */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Additional Information
-                      </h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="annualTurnover">Annual Turnover</Label>
-                          <Input
-                            id="annualTurnover"
-                            value={formData.annualTurnover}
-                            onChange={(e) => handleInputChange("annualTurnover", e.target.value)}
-                            placeholder="₹10 Lakhs - ₹1 Crore"
+                      {/* Account credentials */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <User className="h-5 w-5" />
+                          Account Credentials
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="username"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Username *</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="mytradehandle" autoComplete="username" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="experience">Years in Business</Label>
-                          <Input
-                            id="experience"
-                            value={formData.experience}
-                            onChange={(e) => handleInputChange("experience", e.target.value)}
-                            placeholder="5+ years"
+                          <FormField
+                            control={form.control}
+                            name="password"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Password *</FormLabel>
+                                <FormControl>
+                                  <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="confirmPassword"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Confirm Password *</FormLabel>
+                                <FormControl>
+                                  <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="productInterest">Product Interest</Label>
-                        <Input
-                          id="productInterest"
-                          value={formData.productInterest}
-                          onChange={(e) => handleInputChange("productInterest", e.target.value)}
-                          placeholder="Sarees, Lehengas, Kurtis, etc."
+                      <Separator />
+
+                      {/* Terms and Submit */}
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="termsAccepted"
+                          render={({ field }) => (
+                            <div className="flex items-start space-x-2">
+                              <Checkbox id="terms" checked={field.value} onCheckedChange={field.onChange} />
+                              <div className="grid gap-1.5 leading-none">
+                                <label
+                                  htmlFor="terms"
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                  I agree to the{" "}
+                                  <a href="/terms-conditions" className="text-primary hover:underline">
+                                    Terms & Conditions
+                                  </a>{" "}
+                                  and{" "}
+                                  <a href="/privacy-policy" className="text-primary hover:underline">
+                                    Privacy Policy
+                                  </a>
+                                </label>
+                                <FormMessage />
+                              </div>
+                            </div>
+                          )}
                         />
+
+                        <Button type="submit" className="w-full" size="lg" disabled={registerMutation.isPending}>
+                          {registerMutation.isPending ? "Creating account…" : "Create Trade Account"}
+                        </Button>
+                        <p className="text-center text-sm text-muted-foreground">
+                          Already trading with us? {""}
+                          <Link to="/login" className="font-medium text-primary hover:underline">
+                            Sign in
+                          </Link>
+                        </p>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="website">Website (Optional)</Label>
-                        <Input
-                          id="website"
-                          value={formData.website}
-                          onChange={(e) => handleInputChange("website", e.target.value)}
-                          placeholder="https://yourwebsite.com"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="additionalInfo">Additional Information</Label>
-                        <Textarea
-                          id="additionalInfo"
-                          value={formData.additionalInfo}
-                          onChange={(e) => handleInputChange("additionalInfo", e.target.value)}
-                          placeholder="Tell us more about your business and requirements..."
-                        />
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Terms and Submit */}
-                    <div className="space-y-4">
-                      <div className="flex items-start space-x-2">
-                        <Checkbox
-                          id="terms"
-                          checked={formData.termsAccepted}
-                          onCheckedChange={(checked) => handleInputChange("termsAccepted", checked as boolean)}
-                          required
-                        />
-                        <div className="grid gap-1.5 leading-none">
-                          <label
-                            htmlFor="terms"
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            I agree to the{" "}
-                            <a href="/terms-conditions" className="text-primary hover:underline">
-                              Terms & Conditions
-                            </a>{" "}
-                            and{" "}
-                            <a href="/privacy-policy" className="text-primary hover:underline">
-                              Privacy Policy
-                            </a>
-                          </label>
-                        </div>
-                      </div>
-
-                      <Button type="submit" className="w-full" size="lg">
-                        Create Trade Account
-                      </Button>
-                    </div>
-                  </form>
+                    </form>
+                  </Form>
                 </CardContent>
               </Card>
             </div>

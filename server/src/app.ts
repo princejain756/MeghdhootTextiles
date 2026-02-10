@@ -15,6 +15,7 @@ import catalogRoutes from "./routes/catalog.routes";
 import orderRoutes from "./routes/order.routes";
 import supportRoutes from "./routes/support.routes";
 import uploadRoutes from "./routes/upload.routes";
+import assetRoutes from "./routes/asset.routes";
 import whatsappRoutes from "./routes/whatsapp.routes";
 import { optionalAuth } from "./middleware/auth";
 
@@ -31,6 +32,23 @@ export const createApp = () => {
       crossOriginResourcePolicy: { policy: "cross-origin" },
       // COEP can interfere with dev cross-origin assets; keep disabled.
       crossOriginEmbedderPolicy: false,
+      // Disable X-Frame-Options to allow PDFs to be displayed in iframes on same origin
+      frameguard: false,
+      // Allow iframes to embed PDFs and other content from same origin
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          imgSrc: ["'self'", "data:", "https:", "http:"],
+          fontSrc: ["'self'", "data:"],
+          connectSrc: ["'self'", "https:", "http:", "ws:", "wss:"],
+          frameSrc: ["'self'", "blob:"],
+          objectSrc: ["'self'", "blob:"],
+          mediaSrc: ["'self'", "blob:"],
+          workerSrc: ["'self'", "blob:"],
+        },
+      },
     })
   );
   app.use(express.json({ limit: "1mb" }));
@@ -78,7 +96,16 @@ export const createApp = () => {
   } catch {
     // ignore
   }
-  app.use("/uploads", express.static(uploadsDir));
+
+  // Serve static files with proper Content-Type headers for PDFs
+  app.use("/uploads", (req, res, next) => {
+    if (req.path.toLowerCase().endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+    }
+    next();
+  }, express.static(uploadsDir));
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
@@ -90,6 +117,7 @@ export const createApp = () => {
   app.use("/api/orders", optionalAuth, orderRoutes);
   app.use("/api/support", optionalAuth, supportRoutes);
   app.use("/api/uploads", uploadRoutes);
+  app.use("/api/assets", assetRoutes);
   app.use("/whatsapp", whatsappRoutes);
 
   app.use(notFoundHandler);

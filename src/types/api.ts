@@ -1,14 +1,39 @@
-export type Role = "ADMIN" | "USER";
+export type Role = "ADMIN" | "USER" | "UPLOADER";
+export type Permission = "PRODUCTS" | "CATALOGS" | "ORDERS" | "SUPPORT" | "CUSTOMERS" | "UPLOADS";
 
 export interface ApiUser {
   id: string;
   email: string;
   username: string;
   role: Role;
+  permissions?: Permission[];
   fullName?: string | null;
   phone?: string | null;
   companyName?: string | null;
+  address?: Address | null;
+  tradeProfile?: TradeProfile | null;
   createdAt: string;
+}
+
+export interface Address {
+  line1: string;
+  line2?: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface TradeProfile {
+  gstNumber?: string | null;
+  businessType?: string | null;
+  annualTurnover?: string | null;
+  productInterest?: string | null;
+  experience?: string | null;
+  website?: string | null;
+  additionalInfo?: string | null;
+  verified: boolean;
+  termsAcceptedAt?: string | null;
 }
 
 export interface ProductImage {
@@ -40,6 +65,9 @@ export interface ApiProduct {
   slug: string;
   summary?: string | null;
   description?: string | null;
+  specs?: Array<{ label: string; value: string } | Record<string, never>> | null;
+  shippingInfo?: string | null;
+  careInstructions?: string | null;
   price: string;
   currency: string;
   sku?: string | null;
@@ -72,6 +100,7 @@ export interface ApiCatalog {
   coverImageUrl?: string | null;
   pdfUrl?: string | null;
   itemsCount?: number | null;
+  price?: string | null;
   createdAt: string;
   updatedAt: string;
   items: CatalogItem[];

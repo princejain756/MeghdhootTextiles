@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  MessageCircle, 
-  Facebook, 
+import {
+  MapPin,
+  Phone,
+  Mail,
+  MessageCircle,
+  Facebook,
   Youtube,
   ShoppingCart,
   Shield,
@@ -21,11 +21,6 @@ const OperationsLocations = () => {
   const [open, setOpen] = useState(false);
 
   const locations = [
-    {
-      name: "Surat Sales Store",
-      address:
-        "Kamela Darwaja, Umarwada, Ring Road, (Opp. Millennium Textile Market Back Gate), Surat – 395002, Gujarat, India",
-    },
     {
       name: "Bengaluru Sales Store",
       address: "No.82, J M Road, Avenue Road cross, Bangalore - 560002",
@@ -115,14 +110,14 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <div className="mb-6">
               <div className="mb-4">
-                <img 
-                  src={logomegh} 
-                  alt="Meghdoot Textiles" 
+                <img
+                  src={logomegh}
+                  alt="Meghdoot Textiles"
                   className="h-16 w-auto object-contain"
                 />
               </div>
               <p className="text-primary-foreground/80 mb-4">
-                Manufacturer & Wholesaler of Indian Ethnicwear from Bengaluru, Surat & Kolkata. Serving retailers, 
+                Manufacturer & Wholesaler of Indian Ethnicwear from Bengaluru & Kolkata. Serving retailers,
                 resellers and boutiques with premium quality ethnic wear since 1998.
               </p>
             </div>
@@ -149,11 +144,11 @@ const Footer = () => {
               <OperationsLocations />
               <div className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-accent" />
-                <span className="font-medium">+91 93425 03401</span>
+                <a href="tel:+918088525639" className="font-medium hover:text-accent transition-colors">+91 8088525639</a>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-accent" />
-                <span>blr@meghdoottextiles.com</span>
+                <a href="mailto:info@meghdoottextiles.com" className="hover:text-accent transition-colors">info@meghdoottextiles.com</a>
               </div>
             </div>
           </div>
@@ -173,8 +168,8 @@ const Footer = () => {
                 { name: "Contact", path: "/contact" }
               ].map((link) => (
                 <li key={link.name}>
-                  <a 
-                    href={link.path} 
+                  <a
+                    href={link.path}
                     className="text-primary-foreground/80 hover:text-accent transition-colors text-sm"
                   >
                     {link.name}
@@ -198,8 +193,8 @@ const Footer = () => {
                 { name: "Shipping Policy", path: "/shipping-policy" }
               ].map((link) => (
                 <li key={link.name}>
-                  <a 
-                    href={link.path} 
+                  <a
+                    href={link.path}
                     className="text-primary-foreground/80 hover:text-accent transition-colors text-sm"
                   >
                     {link.name}
@@ -235,12 +230,11 @@ const Footer = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-primary-foreground/80">
             <div className="flex flex-col md:flex-row items-center gap-4">
-              <div>© 2024 Meghdoot Textiles Private Limited. All rights reserved.</div>
+              <div>© 2026 Meghdoot Textiles Private Limited. All rights reserved.</div>
               <div className="hidden md:block">CIN: U51311KA1998PTC024014</div>
             </div>
             <div className="flex flex-wrap items-center gap-4">
-              <span>GST: 24AACCM6639C1ZP (Gujarat)</span>
-              <span>29AACCM6639C1ZF (Karnataka)</span>
+              <span>GST: 29AACCM6639C1ZF (Karnataka)</span>
               <span>19AACCM6639C1ZG (West Bengal)</span>
             </div>
           </div>

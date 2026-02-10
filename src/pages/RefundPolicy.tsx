@@ -2,11 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { 
-  RotateCcw, 
-  CreditCard, 
-  Clock, 
-  CheckCircle, 
+import {
+  RotateCcw,
+  CreditCard,
+  Clock,
+  CheckCircle,
   AlertTriangle,
   Info,
   Calendar,
@@ -66,7 +66,7 @@ const RefundPolicy = () => {
       icon: <RotateCcw className="h-5 w-5" />,
       content: `**Step 1: Contact Us**
       - Email us at returns@meghdoottextiles.com
-      - Call us at +91 93425 03401
+      - Call us at +91 8088525639
       - Provide your order number and reason for return
       - Include photos if reporting damage or defects
 
@@ -268,8 +268,8 @@ const RefundPolicy = () => {
 
       **Contact Methods:**
       - Email: returns@meghdoottextiles.com
-      - Phone: +91 93425 03401
-      - WhatsApp: +91 93425 03401
+      - Phone: +91 8088525639
+      - WhatsApp: +91 8088525639
       - Live chat on our website
 
       **Information to Provide:**
@@ -288,8 +288,8 @@ const RefundPolicy = () => {
 
   const contactInfo = {
     email: "returns@meghdoottextiles.com",
-    phone: "+91 93425 03401",
-    address: "Kamela Darwaja, Umarwada, Ring Road, Surat – 395002, Gujarat, India"
+    phone: "+91 8088525639",
+    address: "No.82, J M Road, Avenue Road cross, Bangalore - 560002"
   };
 
   const returnSteps = [
@@ -410,7 +410,7 @@ const RefundPolicy = () => {
                     <div className="prose prose-sm max-w-none">
                       {section.content.split('\n').map((paragraph, pIndex) => {
                         if (paragraph.trim() === '') return null;
-                        
+
                         // Handle bold text
                         if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
                           return (
@@ -419,7 +419,7 @@ const RefundPolicy = () => {
                             </h4>
                           );
                         }
-                        
+
                         // Handle list items
                         if (paragraph.startsWith('- ')) {
                           return (
@@ -428,7 +428,7 @@ const RefundPolicy = () => {
                             </li>
                           );
                         }
-                        
+
                         return (
                           <p key={pIndex} className="mb-4 leading-relaxed">
                             {paragraph}
@@ -452,7 +452,7 @@ const RefundPolicy = () => {
                     Our dedicated return support team is here to help you with any questions or issues.
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
                     <div className="flex justify-center mb-4">
@@ -463,7 +463,7 @@ const RefundPolicy = () => {
                     <h3 className="font-semibold mb-2">Email Us</h3>
                     <p className="text-sm text-primary-foreground/80">{contactInfo.email}</p>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="flex justify-center mb-4">
                       <div className="p-3 bg-white/10 rounded-full">
@@ -473,7 +473,7 @@ const RefundPolicy = () => {
                     <h3 className="font-semibold mb-2">Call Us</h3>
                     <p className="text-sm text-primary-foreground/80">{contactInfo.phone}</p>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="flex justify-center mb-4">
                       <div className="p-3 bg-white/10 rounded-full">

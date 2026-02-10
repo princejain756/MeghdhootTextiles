@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { Prisma } from "@prisma/client";
 import { slugify } from "../utils/slug";
 
 export interface CatalogInput {
@@ -13,6 +14,7 @@ export interface CatalogInput {
   coverImageUrl?: string;
   pdfUrl?: string;
   itemsCount?: number;
+  price?: number;
   productIds?: string[]; // optional set + order
 }
 
@@ -90,10 +92,11 @@ export const CatalogService = {
         coverImageUrl: input.coverImageUrl,
         pdfUrl: input.pdfUrl,
         itemsCount: input.itemsCount,
-        items: productIds.length
+        price: input.price != null ? new Prisma.Decimal(input.price) : undefined,
+      items: productIds.length
           ? {
-              create: productIds.map((id, index) => ({ productId: id, position: index })),
-            }
+            create: productIds.map((id, index) => ({ productId: id, position: index })),
+          }
           : undefined,
       },
       include: {
@@ -120,6 +123,7 @@ export const CatalogService = {
         coverImageUrl: input.coverImageUrl,
         pdfUrl: input.pdfUrl,
         itemsCount: input.itemsCount,
+        price: input.price != null ? new Prisma.Decimal(input.price) : undefined,
         ...(productIds
           ? {
               items: {

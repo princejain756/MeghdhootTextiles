@@ -5,7 +5,7 @@ import { SupportService } from "../services/support.service";
 import { asyncHandler } from "../utils/async-handler";
 
 export const listTickets = asyncHandler(async (req: Request, res: Response) => {
-  const includeAll = req.auth?.role === Role.ADMIN;
+  const includeAll = req.auth?.role === Role.ADMIN || req.auth?.permissions?.includes("SUPPORT" as any);
   const tickets = await SupportService.listTickets(req.auth?.userId, includeAll);
   res.json({ success: true, tickets });
 });
@@ -32,7 +32,7 @@ export const createTicket = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const getTicket = asyncHandler(async (req: Request, res: Response) => {
-  const includeAll = req.auth?.role === Role.ADMIN;
+  const includeAll = req.auth?.role === Role.ADMIN || req.auth?.permissions?.includes("SUPPORT" as any);
   const ticket = await SupportService.getTicket(req.params.id, req.auth?.userId, includeAll);
   res.json({ success: true, ticket });
 });
@@ -63,9 +63,8 @@ export const addResponse = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const updateTicketStatus = asyncHandler(async (req: Request, res: Response) => {
-  if (req.auth?.role !== Role.ADMIN) {
-    throw createHttpError(403, "Only admins can update ticket status");
-  }
+  const isAllowed = req.auth?.role === Role.ADMIN || req.auth?.permissions?.includes("SUPPORT" as any);
+  if (!isAllowed) throw createHttpError(403, "Only admins or support users can update ticket status");
 
   const { status } = req.body as { status: SupportStatus };
 

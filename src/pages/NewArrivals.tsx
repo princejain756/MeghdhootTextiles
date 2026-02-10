@@ -21,7 +21,7 @@ import { TrendingUp, Sparkles, CalendarDays, BellRing, Clock, Palette, ArrowUpRi
 import ProductGrid from "@/components/ProductGrid";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CatalogApi } from "@/lib/api";
+import { CatalogApi, getImageUrl } from "@/lib/api";
 import { generateWhatsAppLink } from "@/lib/whatsappOrderTemplate";
 import { useToast } from "@/hooks/use-toast";
 
@@ -102,7 +102,7 @@ const buildLookbookSlides = (catalogs: any[]): LookbookSlide[] => {
     .filter((c) => c.coverImageUrl && c.pdfUrl) // Only catalogs with both image and PDF
     .map((c) => ({
       title: c.title,
-      image: c.coverImageUrl,
+      image: getImageUrl(c.coverImageUrl),
       pdfUrl: c.pdfUrl,
     } as LookbookSlide))
     .sort((a, b) => a.title.localeCompare(b.title));
@@ -136,7 +136,7 @@ const NewArrivals = () => {
   const handleDownloadLookbookPreview = () => {
     const catalogs = catalogsQuery.data?.catalogs || [];
     const availableLookbooks = catalogs.filter(c => c.pdfUrl);
-    
+
     if (availableLookbooks.length === 0) {
       toast({
         title: "No lookbooks available",
@@ -154,7 +154,7 @@ const NewArrivals = () => {
       a.href = lookbook.pdfUrl!;
       a.download = `${lookbook.title.replace(/\s+/g, "-").toLowerCase()}-lookbook.pdf`;
       a.click();
-      
+
       toast({
         title: "Download started",
         description: `${lookbook.title} lookbook preview downloaded.`,
@@ -192,9 +192,9 @@ const NewArrivals = () => {
     queryKey: ["catalogs", "public"],
     queryFn: () => CatalogApi.list(),
   });
-  
-  const lookbookSlides = useMemo(() => 
-    buildLookbookSlides(catalogsQuery.data?.catalogs ?? []), 
+
+  const lookbookSlides = useMemo(() =>
+    buildLookbookSlides(catalogsQuery.data?.catalogs ?? []),
     [catalogsQuery.data?.catalogs]
   );
   return (
@@ -214,8 +214,8 @@ const NewArrivals = () => {
               Secure early access to seasonal edits that come with launch assets, merchandising strategy and assured replenishment windows.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="h-12 px-8 text-base"
                 onClick={handleReserveSlots}
               >

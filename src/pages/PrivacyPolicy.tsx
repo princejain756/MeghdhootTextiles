@@ -2,12 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { 
-  Shield, 
-  Eye, 
-  Lock, 
-  Database, 
-  Users, 
+import {
+  Shield,
+  Eye,
+  Lock,
+  Database,
+  Users,
   Mail,
   Phone,
   MapPin,
@@ -216,8 +216,8 @@ const PrivacyPolicy = () => {
 
   const contactInfo = {
     email: "privacy@meghdoottextiles.com",
-    phone: "+91 93425 03401",
-    address: "Kamela Darwaja, Umarwada, Ring Road, Surat – 395002, Gujarat, India"
+    phone: "+91 8088525639",
+    address: "No.82, J M Road, Avenue Road cross, Bangalore - 560002"
   };
 
   return (
@@ -294,7 +294,7 @@ const PrivacyPolicy = () => {
                     <div className="prose prose-sm max-w-none">
                       {section.content.split('\n').map((paragraph, pIndex) => {
                         if (paragraph.trim() === '') return null;
-                        
+
                         // Handle bold text
                         if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
                           return (
@@ -303,7 +303,7 @@ const PrivacyPolicy = () => {
                             </h4>
                           );
                         }
-                        
+
                         // Handle list items
                         if (paragraph.startsWith('- ')) {
                           return (
@@ -312,7 +312,7 @@ const PrivacyPolicy = () => {
                             </li>
                           );
                         }
-                        
+
                         return (
                           <p key={pIndex} className="mb-4 leading-relaxed">
                             {paragraph}
@@ -336,7 +336,7 @@ const PrivacyPolicy = () => {
                     If you have any questions about this Privacy Policy or our data practices, please contact us.
                   </p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
                     <div className="flex justify-center mb-4">
@@ -347,7 +347,7 @@ const PrivacyPolicy = () => {
                     <h3 className="font-semibold mb-2">Email Us</h3>
                     <p className="text-sm text-primary-foreground/80">{contactInfo.email}</p>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="flex justify-center mb-4">
                       <div className="p-3 bg-white/10 rounded-full">
@@ -357,7 +357,7 @@ const PrivacyPolicy = () => {
                     <h3 className="font-semibold mb-2">Call Us</h3>
                     <p className="text-sm text-primary-foreground/80">{contactInfo.phone}</p>
                   </div>
-                  
+
                   <div className="text-center">
                     <div className="flex justify-center mb-4">
                       <div className="p-3 bg-white/10 rounded-full">

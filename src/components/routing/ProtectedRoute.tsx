@@ -1,14 +1,15 @@
 import { Navigate, useLocation } from "react-router-dom";
 import FullScreenLoader from "@/components/FullScreenLoader";
 import { useAuth } from "@/context/AuthContext";
-import type { Role } from "@/types/api";
+import type { Role, Permission } from "@/types/api";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   roles?: Role[];
+  permissions?: Permission[]; // allow access if user has any of these
 }
 
-const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, roles, permissions }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
@@ -21,7 +22,10 @@ const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
   }
 
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    const perms = user.permissions ?? [];
+    if (!permissions || !permissions.some((p) => perms.includes(p))) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

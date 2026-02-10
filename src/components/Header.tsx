@@ -29,6 +29,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import logomegh from "@/assets/logomegh.png";
+import RealTimeSearch from "@/components/RealTimeSearch";
 
 const headerLinks = [
   { label: "Home", to: "/" },
@@ -44,10 +45,10 @@ const Header = () => {
   const { state, setIsOpen: setCartOpen } = useCart();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const desktopSearchRef = useRef<HTMLInputElement | null>(null);
 
   const gotoPortal = () => {
-    navigate(user?.role === "ADMIN" ? "/admin" : "/dashboard");
+    const isAdminLike = user?.role === "ADMIN" || user?.role === "UPLOADER";
+    navigate(isAdminLike ? "/admin" : "/dashboard");
   };
 
   const handleLogout = async () => {
@@ -84,204 +85,193 @@ const Header = () => {
   return (
     <>
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <FomoBar />
+        <FomoBar />
 
-      <div className="bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                <span>+91 93425 03401</span>
+        <div className="bg-primary text-primary-foreground">
+          <div className="container mx-auto px-4 py-2">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <a href="tel:+918088525639" className="hover:text-accent transition-colors">+91 8088525639</a>
+                </div>
+                <div className="hidden md:block">GST: 29AACCM6639C1ZF Bengaluru</div>
               </div>
-              <div className="hidden md:block">GST: 24AACCM6639C1ZP (Gujarat)</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="hidden md:block">Dispatch in 2-5 days</span>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-accent text-accent-foreground hover:bg-accent/90"
-                asChild
-              >
-                <a href="https://wa.me/919342503401" target="_blank" rel="noreferrer">
-                  <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp Us
-                </a>
-              </Button>
+              <div className="flex items-center gap-4">
+                <span className="hidden md:block">Dispatch in 2-5 days</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                  asChild
+                >
+                  <a href="https://wa.me/919342503401" target="_blank" rel="noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp Us
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center">
-            <img 
-              src={logomegh} 
-              alt="Meghdoot Textiles" 
-              className="h-24 w-auto object-contain ml-8"
-            />
-          </Link>
-
-          <nav className="hidden md:flex items-center space-x-6">
-            {headerLinks.map((item) => (
-              <NavLink
-                key={item.label}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "text-sm font-medium transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div className="flex items-center space-x-3">
-            <form onSubmit={submitGlobalSearch} className="relative hidden lg:flex items-center">
-              <Search className="pointer-events-none absolute left-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={desktopSearchRef}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search products, fabrics, catalogs"
-                aria-label="Global search"
-                className="w-72 pl-10 pr-14"
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            <Link to="/" className="flex items-center">
+              <img
+                src={logomegh}
+                alt="Meghdoot Textiles"
+                className="h-24 w-auto object-contain ml-8"
               />
-              <span className="pointer-events-none absolute right-2 select-none rounded-md border bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">⌘K</span>
-            </form>
+            </Link>
 
-                        <Button variant="ghost" size="sm" className="relative" onClick={() => setCartOpen(true)}>
-              <ShoppingCart className="h-5 w-5" />
-              {state.items.length > 0 && (
-                <Badge variant="secondary" className="absolute -right-2 -top-2 h-5 min-w-5 rounded-full px-1 text-xs">
-                  {state.items.reduce((total, item) => total + item.quantity, 0)}
-                </Badge>
-              )}
-            </Button>
+            <nav className="hidden md:flex items-center space-x-6">
+              {headerLinks.map((item) => (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      "text-sm font-medium transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    )
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
 
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback>{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline-flex">{user.username}</span>
+            <div className="flex items-center space-x-3">
+              <RealTimeSearch />
+
+              <Button variant="ghost" size="sm" className="relative" onClick={() => setCartOpen(true)}>
+                <ShoppingCart className="h-5 w-5" />
+                {state.items.length > 0 && (
+                  <Badge variant="secondary" className="absolute -right-2 -top-2 h-5 min-w-5 rounded-full px-1 text-xs">
+                    {state.items.reduce((total, item) => total + item.quantity, 0)}
+                  </Badge>
+                )}
+              </Button>
+
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback>{user.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="hidden sm:inline-flex">{user.username}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      Signed in as <span className="font-medium text-foreground">{user.email}</span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={gotoPortal}>
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      {user.role === "ADMIN" || user.role === "UPLOADER" ? "Admin console" : "My dashboard"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" /> Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/login" className="gap-2">
+                      <UserRound className="h-4 w-4" /> Login
+                    </Link>
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>
-                    Signed in as <span className="font-medium text-foreground">{user.email}</span>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={gotoPortal}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    {user.role === "ADMIN" ? "Admin console" : "My dashboard"}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" /> Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/login" className="gap-2">
-                    <UserRound className="h-4 w-4" /> Login
-                  </Link>
-                </Button>
-                <Button asChild size="sm" className="hidden md:inline-flex">
-                  <Link to="/trade-account">Create Trade Account</Link>
-                </Button>
-              </>
-            )}
+                  <Button asChild size="sm" className="hidden md:inline-flex">
+                    <Link to="/trade-account">Create Trade Account</Link>
+                  </Button>
+                </>
+              )}
 
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="md:hidden">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <nav className="flex flex-col gap-4">
-                  {headerLinks.map((item) => (
-                    <NavLink
-                      key={item.label}
-                      to={item.to}
-                      className={({ isActive }) =>
-                        cn(
-                          "text-lg transition-colors",
-                          isActive ? "text-primary" : "hover:text-accent"
-                        )
-                      }
-                      onClick={() => setIsOpen(false)}
-                    >
-                      {item.label}
-                    </NavLink>
-                  ))}
-                  <div className="border-t pt-4">
-                    {user ? (
-                      <div className="flex flex-col gap-2">
-                        <Button onClick={() => {
-                          gotoPortal();
-                          setIsOpen(false);
-                        }}>
-                          Go to portal
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
+              <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="md:hidden">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                  <nav className="flex flex-col gap-4">
+                    {headerLinks.map((item) => (
+                      <NavLink
+                        key={item.label}
+                        to={item.to}
+                        className={({ isActive }) =>
+                          cn(
+                            "text-lg transition-colors",
+                            isActive ? "text-primary" : "hover:text-accent"
+                          )
+                        }
+                        onClick={() => setIsOpen(false)}
+                      >
+                        {item.label}
+                      </NavLink>
+                    ))}
+                    <div className="border-t pt-4">
+                      {user ? (
+                        <div className="flex flex-col gap-2">
+                          <Button onClick={() => {
+                            gotoPortal();
                             setIsOpen(false);
-                            handleLogout();
-                          }}
-                        >
-                          Sign out
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <Button asChild>
-                          <Link to="/trade-account" onClick={() => setIsOpen(false)}>
-                            Create Trade Account
-                          </Link>
-                        </Button>
-                        <Button variant="outline" asChild>
-                          <Link to="/login" onClick={() => setIsOpen(false)}>
-                            Login
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                    <form
-                      className="mt-4 flex items-center gap-2 rounded-lg border bg-secondary p-2"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const q = searchTerm.trim();
-                        setIsOpen(false);
-                        navigate(q ? `/catalogs?q=${encodeURIComponent(q)}` : "/catalogs");
-                      }}
-                    >
-                      <Search className="h-4 w-4" />
-                      <Input
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search products, fabrics, catalogs"
-                      />
-                    </form>
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
+                          }}>
+                            Go to portal
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsOpen(false);
+                              handleLogout();
+                            }}
+                          >
+                            Sign out
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <Button asChild>
+                            <Link to="/trade-account" onClick={() => setIsOpen(false)}>
+                              Create Trade Account
+                            </Link>
+                          </Button>
+                          <Button variant="outline" asChild>
+                            <Link to="/login" onClick={() => setIsOpen(false)}>
+                              Login
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
+                      <form
+                        className="mt-4 flex items-center gap-2 rounded-lg border bg-secondary p-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const q = searchTerm.trim();
+                          setIsOpen(false);
+                          navigate(q ? `/catalogs?q=${encodeURIComponent(q)}` : "/catalogs");
+                        }}
+                      >
+                        <Search className="h-4 w-4" />
+                        <Input
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="Search products, fabrics, catalogs"
+                        />
+                      </form>
+                    </div>
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
-    <CartDrawer open={state.isOpen} onOpenChange={setCartOpen} />
+      </header>
+      <CartDrawer open={state.isOpen} onOpenChange={setCartOpen} />
     </>
   );
 };

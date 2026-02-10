@@ -21,6 +21,21 @@ type RegisterInput = {
   fullName?: string;
   phone?: string;
   companyName?: string;
+  // Optional extras for trade registration
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  gstNumber?: string;
+  businessType?: string;
+  annualTurnover?: string;
+  productInterest?: string;
+  experience?: string;
+  website?: string;
+  additionalInfo?: string;
+  termsAccepted?: boolean;
 };
 
 type AuthContextValue = {

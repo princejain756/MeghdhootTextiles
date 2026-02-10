@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requireRole } from "../middleware/auth";
+import { authenticate, requireRoleOrPermission } from "../middleware/auth";
 import { validate } from "../utils/validate";
-import { createOrder, listOrders, getOrder, updateOrderStatus, upsertDelivery, createGuestOrder } from "../controllers/order.controller";
-import { OrderStatus, Role } from "@prisma/client";
+import { createOrder, listOrders, getOrder, updateOrderStatus, upsertDelivery, createGuestOrder, createWhatsappOrder } from "../controllers/order.controller";
+import { OrderStatus, Role, Permission } from "@prisma/client";
 
 const router = Router();
 
@@ -71,6 +71,21 @@ router.post(
   createGuestOrder
 );
 
+router.post(
+  "/whatsapp",
+  authenticate,
+  validate(
+    z.object({
+      body: z.object({
+        items: z.array(
+          z.object({ productId: z.string().uuid(), quantity: z.number().int().positive() })
+        ).min(1),
+      }),
+    })
+  ),
+  createWhatsappOrder
+);
+
 router.get("/", authenticate, listOrders);
 router.get(
   "/:id",
@@ -86,7 +101,7 @@ router.get(
 router.patch(
   "/:id/status",
   authenticate,
-  requireRole(Role.ADMIN),
+  requireRoleOrPermission(Role.ADMIN, Permission.ORDERS),
   validate(
     z.object({
       params: z.object({ id: z.string().uuid() }),
@@ -99,7 +114,7 @@ router.patch(
 router.put(
   "/:id/delivery",
   authenticate,
-  requireRole(Role.ADMIN),
+  requireRoleOrPermission(Role.ADMIN, Permission.ORDERS),
   validate(
     z.object({
       params: z.object({ id: z.string().uuid() }),

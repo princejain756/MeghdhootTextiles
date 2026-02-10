@@ -23,6 +23,7 @@ type LocationState = {
 };
 
 const Login = () => {
+  const ENABLE_GOOGLE_LOGIN = false; // Set to true to enable Google login
   const { user, login, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -124,6 +125,32 @@ const Login = () => {
               </Form>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
+              {ENABLE_GOOGLE_LOGIN && (
+                <>
+                  <div className="mt-6">
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or continue with
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full mt-6"
+                    onClick={() => window.location.href = "/api/auth/google"}
+                  >
+                    Continue with Google
+                  </Button>
+                </>
+              )}
+
                 New to Meghdoot? {""}
                 <Link to="/register" className="font-medium text-primary hover:underline">
                   Create your trade account

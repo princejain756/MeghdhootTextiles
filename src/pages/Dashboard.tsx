@@ -1,4 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { AlertCircle, Box, Inbox, LifeBuoy, Package, Plus, Truck } from "lucide-react";
@@ -18,13 +22,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/context/AuthContext";
-import { ApiUtils, OrderApi, SupportApi } from "@/lib/api";
+import { ApiUtils, OrderApi, SupportApi, AuthApi } from "@/lib/api";
 import type { ApiOrder, SupportStatus, SupportTicket } from "@/types/api";
 import FullScreenLoader from "@/components/FullScreenLoader";
 import { useToast } from "@/components/ui/use-toast";
 import PageLayout from "@/components/PageLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 const statusVariants: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-800",
@@ -43,11 +48,46 @@ const supportStatusCopy: Record<SupportStatus, { badge: string; label: string }>
 
 const Dashboard = () => {
   const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [supportDialogOpen, setSupportDialogOpen] = useState(false);
   const [supportSubject, setSupportSubject] = useState("");
   const [supportMessage, setSupportMessage] = useState("");
+
+  // Change password form
+  const passwordRequirements =
+    "Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.";
+  const changePasswordSchema = z
+    .object({
+      currentPassword: z.string().min(8, "Current password is required"),
+      newPassword: z
+        .string()
+        .min(8, passwordRequirements)
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/, passwordRequirements),
+      confirmPassword: z.string(),
+    })
+    .refine((d) => d.newPassword === d.confirmPassword, {
+      path: ["confirmPassword"],
+      message: "Passwords do not match",
+    });
+
+  type ChangePasswordForm = z.infer<typeof changePasswordSchema>;
+  const changePwForm = useForm<ChangePasswordForm>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
+  });
+  const changePassword = useMutation({
+    mutationFn: (values: ChangePasswordForm) =>
+      AuthApi.changePassword(values.currentPassword, values.newPassword),
+    onSuccess: () => {
+      changePwForm.reset();
+      toast({ title: "Password updated", description: "Your password was changed successfully." });
+    },
+    onError: (error) => {
+      toast({ title: "Couldn't change password", description: error.message, variant: "destructive" });
+    },
+  });
 
   const ordersQuery = useQuery({
     queryKey: ["orders"],
@@ -118,6 +158,11 @@ const Dashboard = () => {
 
   if (!user) {
     return null;
+  }
+
+  // Hard-redirect uploaders to the admin workspace
+  if (user.role === "UPLOADER") {
+    return <Navigate to="/admin" replace />;
   }
 
   const handleTicketSubmit = () => {
@@ -376,6 +421,66 @@ const Dashboard = () => {
                 <p>Need help with something specific? Raise a ticket for proactive assistance.</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Account Security */}
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <CardTitle>Account security</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...changePwForm}>
+              <form
+                onSubmit={changePwForm.handleSubmit((v) => changePassword.mutate(v))}
+                className="grid gap-4 max-w-lg"
+              >
+                <FormField
+                  control={changePwForm.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current password</FormLabel>
+                      <FormControl>
+                        <Input type="password" autoComplete="current-password" placeholder="••••••••" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={changePwForm.control}
+                    name="newPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>New password</FormLabel>
+                        <FormControl>
+                          <Input type="password" autoComplete="new-password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={changePwForm.control}
+                    name="confirmPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm new password</FormLabel>
+                        <FormControl>
+                          <Input type="password" autoComplete="new-password" placeholder="••••••••" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" disabled={changePassword.isPending} className="w-fit">
+                  {changePassword.isPending ? "Updating…" : "Change password"}
+                </Button>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>

@@ -81,8 +81,22 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
       const whatsappMessage = generateWhatsAppOrderMessage(state.items, orderDetails, subtotal);
       const whatsappLink = generateWhatsAppLink(whatsappMessage);
 
-      // TODO: Save order to admin panel
-      await saveOrderToAdmin(orderDetails, state.items, subtotal);
+      // Record order: if logged-in user -> create WhatsApp order; otherwise save guest order
+      if (user) {
+        const itemsForApi = state.items.map((it) => ({ productId: it.id, quantity: it.quantity }));
+        try {
+          await fetch('/api/orders/whatsapp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ items: itemsForApi }),
+          });
+        } catch (e) {
+          console.warn('Failed to record trade order, continuing with WhatsApp:', e);
+        }
+      } else {
+        await saveOrderToAdmin(orderDetails, state.items, subtotal);
+      }
 
       // Open WhatsApp
       window.open(whatsappLink, "_blank");
@@ -124,6 +138,9 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
 
       const result = await response.json();
       console.log('Order saved successfully:', result);
+      if (result?.createdUser && result?.tempPassword) {
+        alert(`We created a tracking account for you!\n\nUsername: ${result.createdUser.username}\nTemporary password: ${result.tempPassword}\n\nYou can sign in from the top right to track orders in your Trade Hub.`);
+      }
     } catch (error) {
       console.warn("Could not save order to admin panel:", error);
       // Continue with WhatsApp flow even if admin save fails

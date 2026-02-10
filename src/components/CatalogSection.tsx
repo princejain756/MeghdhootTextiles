@@ -8,6 +8,8 @@ import { useCart } from "@/context/CartContext";
 import { useQuery } from "@tanstack/react-query";
 import { CatalogApi } from "@/lib/api";
 import type { ApiCatalog } from "@/types/api";
+import { useAuth } from "@/context/AuthContext";
+import { ApiUtils } from "@/lib/api";
 
 type CatalogCard = {
   id: string;
@@ -18,6 +20,7 @@ type CatalogCard = {
   dispatch: string; // e.g. "3-4 days"
   image: string; // URL
   pdfUrl?: string; // URL for quick view
+  price?: string | null;
 };
 
 function humanizeFilename(path: string): string {
@@ -59,8 +62,10 @@ const CatalogSection = () => {
       dispatch: c.dispatch || "3-5 days",
       image: c.coverImageUrl || "",
       pdfUrl: c.pdfUrl || undefined,
+      price: c.price ?? null,
     }));
   }, [apiQuery.data]);
+  const { user } = useAuth();
 
   return (
     <section className="py-20 bg-muted/30">
@@ -126,6 +131,12 @@ const CatalogSection = () => {
                   {catalog.name}
                 </CardTitle>
                 <div className="space-y-2 text-sm text-muted-foreground">
+                  {user?.role === "USER" && catalog.price ? (
+                    <div className="flex justify-between text-foreground">
+                      <span>Price:</span>
+                      <span className="font-semibold">{ApiUtils.formatCurrency(catalog.price, "INR")}</span>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between">
                     <span>Catalog ID:</span>
                     <span className="font-medium">{catalog.id}</span>

@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { UploadApi } from "@/lib/api";
+import { UploadApi, getImageUrl } from "@/lib/api";
 import { Trash2, UploadCloud, MoveLeft, MoveRight } from "lucide-react";
 
 export type UploaderImage = {
@@ -88,9 +88,8 @@ export default function ImageUploader({ value, onChange, max = 8 }: Props) {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center ${
-          isDragging ? "border-primary bg-primary/5" : "border-border"
-        } ${!canAddMore ? "opacity-50" : ""}`}
+        className={`flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center ${isDragging ? "border-primary bg-primary/5" : "border-border"
+          } ${!canAddMore ? "opacity-50" : ""}`}
       >
         <UploadCloud className="h-6 w-6 text-muted-foreground" />
         <div className="text-sm text-muted-foreground">
@@ -124,7 +123,7 @@ export default function ImageUploader({ value, onChange, max = 8 }: Props) {
             <div key={`${img.url}-${i}`} className="group rounded-lg border bg-card shadow-sm">
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.url} alt={img.alt ?? ""} className="h-40 w-full rounded-t-lg object-cover" />
+                <img src={getImageUrl(img.url)} alt={img.alt ?? ""} className="h-40 w-full rounded-t-lg object-cover" />
                 <div className="pointer-events-none absolute inset-0 rounded-t-lg ring-0 ring-primary/40 group-hover:ring-2" />
                 <div className="absolute left-1 top-1 flex gap-1">
                   <Button type="button" size="icon" variant="secondary" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0}>

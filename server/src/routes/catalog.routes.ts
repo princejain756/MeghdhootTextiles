@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requireRole } from "../middleware/auth";
-import { Role } from "@prisma/client";
+import { authenticate, requireRoleOrPermission } from "../middleware/auth";
+import { Permission, Role } from "@prisma/client";
 import { validate } from "../utils/validate";
 import {
   createCatalog,
@@ -27,6 +27,7 @@ const baseSchema = z.object({
   coverImageUrl: z.string().min(1).optional(),
   pdfUrl: z.string().min(1).optional(),
   itemsCount: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().int().min(0).optional()),
+  price: z.preprocess((v) => (v === '' || v == null ? undefined : Number(v)), z.number().positive().optional()),
   productIds: z.array(z.string().uuid()).optional(),
 });
 
@@ -39,15 +40,33 @@ const setProductsSchema = z.object({
 
 router.get("/", listCatalogs);
 router.get("/:id", getCatalog);
-router.post("/", authenticate, requireRole(Role.ADMIN), validate(createSchema), createCatalog);
-router.put("/:id", authenticate, requireRole(Role.ADMIN), validate(updateSchema), updateCatalog);
+// Allow ADMIN and UPLOADER to create/update catalogs and set products; delete remains ADMIN-only
+router.post(
+  "/",
+  authenticate,
+  requireRoleOrPermission([Role.ADMIN, Role.UPLOADER], Permission.CATALOGS),
+  validate(createSchema),
+  createCatalog
+);
+router.put(
+  "/:id",
+  authenticate,
+  requireRoleOrPermission([Role.ADMIN, Role.UPLOADER], Permission.CATALOGS),
+  validate(updateSchema),
+  updateCatalog
+);
 router.put(
   "/:id/products",
   authenticate,
-  requireRole(Role.ADMIN),
+  requireRoleOrPermission([Role.ADMIN, Role.UPLOADER], Permission.CATALOGS),
   validate(setProductsSchema),
   setCatalogProducts
 );
-router.delete("/:id", authenticate, requireRole(Role.ADMIN), deleteCatalog);
+router.delete(
+  "/:id",
+  authenticate,
+  requireRoleOrPermission(Role.ADMIN, Permission.CATALOGS),
+  deleteCatalog
+);
 
 export default router;

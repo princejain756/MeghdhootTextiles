@@ -6,27 +6,57 @@ const prisma = new PrismaClient();
 const ADMIN_USERNAME = "admin";
 const ADMIN_EMAIL = "admin@meghdoot.com";
 const ADMIN_PASSWORD = "AdminMegh1412@4";
+
+const UPLOADER_USERNAME = "uploadadmin";
+const UPLOADER_EMAIL = "uploadadmin@meghdoot.com";
+const UPLOADER_PASSWORD = "uploadamdin1241252$%";
 async function main() {
+    // Ensure admin user exists
     const existingAdmin = await prisma.user.findFirst({
-        where: {
-            OR: [{ username: ADMIN_USERNAME }, { email: ADMIN_EMAIL }],
-        },
+        where: { OR: [{ username: ADMIN_USERNAME }, { email: ADMIN_EMAIL }] },
     });
-    if (existingAdmin) {
-        console.log("Admin account already exists. Skipping admin seed.");
-        return;
+    if (!existingAdmin) {
+        const adminHash = await hashPassword(ADMIN_PASSWORD);
+        await prisma.user.create({
+            data: {
+                username: ADMIN_USERNAME,
+                email: ADMIN_EMAIL,
+                passwordHash: adminHash,
+                role: Role.ADMIN,
+                fullName: "Meghdoot Admin",
+            },
+        });
+        console.log("Admin user created with username 'admin'.");
     }
-    const passwordHash = await hashPassword(ADMIN_PASSWORD);
-    await prisma.user.create({
-        data: {
-            username: ADMIN_USERNAME,
-            email: ADMIN_EMAIL,
-            passwordHash,
-            role: Role.ADMIN,
-            fullName: "Meghdoot Admin",
-        },
+    else {
+        console.log("Admin account already exists. Skipping admin creation.");
+    }
+    // Ensure uploader user exists
+    const existingUploader = await prisma.user.findFirst({
+        where: { OR: [{ username: UPLOADER_USERNAME }, { email: UPLOADER_EMAIL }] },
     });
-    console.log("Admin user created with username 'admin'.");
+    if (!existingUploader) {
+        const uploaderHash = await hashPassword(UPLOADER_PASSWORD);
+        await prisma.user.create({
+            data: {
+                username: UPLOADER_USERNAME,
+                email: UPLOADER_EMAIL,
+                passwordHash: uploaderHash,
+                role: Role.UPLOADER,
+                fullName: "Catalog/Products Uploader",
+            },
+        });
+        console.log("Uploader user created with username 'uploadadmin'.");
+    }
+    else {
+        if (existingUploader.role !== Role.UPLOADER) {
+            await prisma.user.update({ where: { id: existingUploader.id }, data: { role: Role.UPLOADER } });
+            console.log("Uploader account role updated to UPLOADER.");
+        }
+        else {
+            console.log("Uploader account already exists with correct role.");
+        }
+    }
 }
 main()
     .catch((error) => {

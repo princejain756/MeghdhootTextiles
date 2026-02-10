@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  FileText, 
-  Package, 
-  Calculator, 
-  Clock, 
+import {
+  FileText,
+  Package,
+  Calculator,
+  Clock,
   CheckCircle,
   Star,
   Award,
@@ -230,7 +230,7 @@ const BulkInquiry = () => {
                         <Building2 className="h-5 w-5" />
                         Business Information
                       </h3>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="businessName">Business Name *</Label>
@@ -285,7 +285,7 @@ const BulkInquiry = () => {
                             id="gstNumber"
                             value={formData.gstNumber}
                             onChange={(e) => handleInputChange("gstNumber", e.target.value)}
-                            placeholder="24AACCM6639C1ZP"
+                            placeholder="29AACCM6639C1ZF"
                           />
                         </div>
                         <div className="space-y-2">
@@ -313,7 +313,7 @@ const BulkInquiry = () => {
                         <MapPin className="h-5 w-5" />
                         Business Address
                       </h3>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="address">Address *</Label>
                         <Textarea
@@ -367,7 +367,7 @@ const BulkInquiry = () => {
                         <Package className="h-5 w-5" />
                         Product Requirements
                       </h3>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="productCategory">Product Category *</Label>
                         <Select value={formData.productCategory} onValueChange={(value) => handleInputChange("productCategory", value)}>

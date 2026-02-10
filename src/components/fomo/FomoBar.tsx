@@ -26,7 +26,7 @@ const messages: Record<Mode, { icon: JSX.Element; render: (args: { text: string 
     icon: <CalendarClock className="h-4 w-4" />,
     render: () => (
       <>
-        Festive Drop II <span className="hidden sm:inline">opens</span> <strong className="font-semibold">Oct 3</strong>, closes <strong className="font-semibold">Oct 10</strong>.
+        Festive Drop II <span className="hidden sm:inline">opens</span> <strong className="font-semibold">Dec 15</strong>, closes <strong className="font-semibold">Dec 25</strong>.
       </>
     ),
   },

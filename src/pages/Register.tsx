@@ -59,7 +59,7 @@ const Register = () => {
 
   useEffect(() => {
     if (user) {
-      navigate(user.role === "ADMIN" ? "/admin" : "/dashboard", { replace: true });
+      navigate(user.role === "ADMIN" || user.role === "UPLOADER" ? "/admin" : "/dashboard", { replace: true });
     }
   }, [navigate, user]);
 

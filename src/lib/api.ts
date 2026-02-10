@@ -11,6 +11,20 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000/api";
 
+export const getImageUrl = (url: string | undefined | null) => {
+  if (!url) return "";
+  if (url.startsWith("data:") || url.startsWith("blob:")) return url;
+
+  // If the URL is from our uploads folder, ensure it points to the current API base
+  if (url.includes("/uploads/")) {
+    const filename = url.split("/uploads/").pop();
+    const baseUrl = API_BASE.replace(/\/api\/?$/, ""); // safe remove /api or /api/
+    return `${baseUrl}/uploads/${filename}`;
+  }
+
+  return url;
+};
+
 type JsonBody = Record<string, unknown> | Array<unknown>;
 
 async function request<TResponse>(path: string, options: RequestInit = {}) {
@@ -65,10 +79,36 @@ export const AuthApi = {
   logout: () => request<{ success: true }>("/auth/logout", { method: "POST" }),
   me: () => request<{ success: true; user: ApiUser }>("/auth/me"),
   listUsers: () => request<{ success: true; users: ApiUser[] }>("/auth/users"),
+  createUser: (body: JsonBody) =>
+    request<{ success: true; user: ApiUser }>("/auth/users", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateUser: (id: string, body: JsonBody) =>
+    request<{ success: true; user: ApiUser }>(`/auth/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  resetUserPassword: (id: string) =>
+    request<{ success: true; tempPassword: string }>(`/auth/users/${id}/reset-password`, {
+      method: "POST",
+    }),
+  setTradeVerification: (id: string, verified: boolean) =>
+    request<{ success: true; tradeProfile: unknown }>(`/auth/users/${id}/trade-verify`, {
+      method: "PATCH",
+      body: JSON.stringify({ verified }),
+    }),
+  deleteUser: (id: string) => request<{ success: true }>(`/auth/users/${id}`, { method: "DELETE" }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ success: true }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 export const ProductApi = {
   list: () => request<{ success: true; products: ApiProduct[] }>("/products"),
+  get: (id: string) => request<{ success: true; product: ApiProduct }>(`/products/${id}`),
   create: (body: JsonBody) =>
     request<{ success: true; product: ApiProduct }>("/products", {
       method: "POST",
@@ -106,6 +146,11 @@ export const CatalogApi = {
 export const OrderApi = {
   list: () => request<{ success: true; orders: ApiOrder[] }>("/orders"),
   get: (id: string) => request<{ success: true; order: ApiOrder }>(`/orders/${id}`),
+  whatsapp: (items: Array<{ productId: string; quantity: number }>) =>
+    request<{ success: true; order: ApiOrder }>("/orders/whatsapp", {
+      method: "POST",
+      body: JSON.stringify({ items }),
+    }),
   create: (body: JsonBody) =>
     request<{ success: true; order: ApiOrder }>("/orders", {
       method: "POST",
@@ -177,11 +222,54 @@ export const UploadApi = {
       }
     );
   },
+  videos: (files: File[]) => {
+    const fd = new FormData();
+    files.forEach((file) => fd.append("files", file));
+    return request<{ success: true; files: Array<{ url: string; filename: string; size: number }> }>(
+      "/uploads/videos",
+      {
+        method: "POST",
+        body: fd,
+      }
+    );
+  },
   imagesWithProgress: (files: File[], onProgress?: (pct: number) => void) =>
     xhrUpload("/uploads/images", files, onProgress),
   pdfsWithProgress: (files: File[], onProgress?: (pct: number) => void) =>
     xhrUpload("/uploads/pdfs", files, onProgress),
+  videosWithProgress: (files: File[], onProgress?: (pct: number) => void) =>
+    xhrUpload("/uploads/videos", files, onProgress),
 };
+
+export type Asset = {
+  filename: string;
+  size: number;
+  type: "image" | "video" | "pdf" | "other";
+  createdAt: string;
+  modifiedAt: string;
+};
+
+export const AssetApi = {
+  list: () => request<{ success: true; assets: Asset[] }>("/assets"),
+  delete: (filename: string) =>
+    request<{ success: true; message: string }>(`/assets/${encodeURIComponent(filename)}`, {
+      method: "DELETE",
+    }),
+  bulkDelete: (filenames: string[]) =>
+    request<{ success: true; deleted: number; failed: number }>("/assets/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ filenames }),
+    }),
+  optimize: (filenames?: string[]) =>
+    request<{ success: true; optimized: string[]; skipped: string[]; failed: string[] }>(
+      "/assets/optimize",
+      {
+        method: "POST",
+        body: JSON.stringify({ filenames }),
+      }
+    ),
+};
+
 
 // Helper for upload progress using XHR (fetch lacks upload progress events reliably)
 function xhrUpload(path: string, files: File[], onProgress?: (pct: number) => void) {

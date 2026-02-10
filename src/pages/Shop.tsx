@@ -24,6 +24,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { generateWhatsAppLink } from "@/lib/whatsappOrderTemplate";
 import { useToast } from "@/hooks/use-toast";
+import ProductGrid from "@/components/ProductGrid";
+import CatalogSection from "@/components/CatalogSection";
 
 const quickFilters = [
   "Ready Stock",
@@ -35,47 +37,7 @@ const quickFilters = [
   "Plus Sizes",
 ];
 
-const productHighlights = [
-  {
-    name: "Signature Bridal Sarees",
-    description:
-      "Hand-embroidered zardozi, sequins and organza textures curated for premium bridal boutiques.",
-    priceRange: "₹1,299 – ₹3,499",
-    turnaround: "Dispatch in 3 days",
-    gradient: "linear-gradient(135deg, rgba(27,36,62,0.95), rgba(60,73,115,0.8), rgba(252,163,17,0.85))",
-    tags: ["Handwork", "Wedding", "Limited Edition"],
-    metrics: [
-      { label: "MOQ", value: "10 pcs" },
-      { label: "Margin", value: "up to 48%" },
-    ],
-  },
-  {
-    name: "Everyday Saree Capsules",
-    description:
-      "Breathable georgette and cotton blends with effortless drape designed for daily-wear retailers.",
-    priceRange: "₹449 – ₹999",
-    turnaround: "Dispatch in 48 hours",
-    gradient: "linear-gradient(135deg, rgba(255,255,255,0.95), rgba(225,238,255,0.9), rgba(125,180,255,0.75))",
-    tags: ["Ready Stock", "Georgette", "Retail Favorite"],
-    metrics: [
-      { label: "MOQ", value: "6 pcs" },
-      { label: "Margin", value: "35%" },
-    ],
-  },
-  {
-    name: "Occasion Wear Kurtis",
-    description:
-      "Statement silhouettes in silk-cotton with artisanal embellishments tailored for boutique curation.",
-    priceRange: "₹699 – ₹1,599",
-    turnaround: "Dispatch in 4 days",
-    gradient: "linear-gradient(135deg, rgba(36,28,79,0.92), rgba(73,50,123,0.85), rgba(252,163,17,0.7))",
-    tags: ["Festive", "Artisanal", "Boutique"],
-    metrics: [
-      { label: "MOQ", value: "8 pcs" },
-      { label: "Margin", value: "42%" },
-    ],
-  },
-];
+// Removed static productHighlights; live data shown via ProductGrid
 
 const curatedStories = [
   {
@@ -276,64 +238,24 @@ const Shop = () => {
         </div>
       </section>
 
+      {/* Live Featured Catalogs from database */}
+      <CatalogSection />
+
+      {/* Live Products from database */}
       <section className="container mx-auto px-4 py-16">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl space-y-4">
-            <h2 className="text-section-title">Signature collections to anchor your assortment</h2>
+            <h2 className="text-section-title">New Arrivals</h2>
             <p className="text-base text-muted-foreground">
-              Every collection ships with lookbooks, merchandising notes and reorder pathways so you can launch seamlessly across channels.
+              Fresh styles recently added to Meghdoot Trade Hub. Login to see trade pricing.
             </p>
           </div>
-          <Button variant="ghost" className="self-start text-primary">
-            Download latest catalog
+          <Button variant="ghost" className="self-start text-primary" onClick={() => navigate("/catalogs")}>
+            Explore all catalogs
           </Button>
         </div>
-        <div className="mt-10 grid gap-8 lg:grid-cols-3">
-          {productHighlights.map((collection) => (
-            <Card
-              key={collection.name}
-              className="group relative overflow-hidden border-none shadow-xl"
-            >
-              <div
-                className="absolute inset-0 opacity-90 transition-opacity duration-500 group-hover:opacity-100"
-                style={{ backgroundImage: collection.gradient }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-black/20 to-black/30" />
-              <div className="relative flex h-full flex-col justify-between gap-10 p-8 text-primary-foreground">
-                <div className="space-y-5">
-                  <div className="flex flex-wrap gap-2">
-                    {collection.tags.map((tag) => (
-                      <Badge key={tag} className="bg-background/20 text-xs font-medium uppercase tracking-wide">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="text-2xl font-semibold leading-tight">
-                      {collection.name}
-                    </h3>
-                    <p className="text-sm leading-relaxed text-primary-foreground/80">
-                      {collection.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-white/20 bg-black/20 p-4 text-xs uppercase tracking-wide">
-                  <div>
-                    <p className="font-semibold text-sm">{collection.priceRange}</p>
-                    <p className="text-[11px] text-primary-foreground/70">{collection.turnaround}</p>
-                  </div>
-                  <div className="flex gap-6">
-                    {collection.metrics.map((metric) => (
-                      <div key={metric.label} className="text-right">
-                        <p className="text-[11px] text-primary-foreground/70">{metric.label}</p>
-                        <p className="text-sm font-semibold">{metric.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+        <div className="mt-8">
+          <ProductGrid limit={12} />
         </div>
       </section>
 

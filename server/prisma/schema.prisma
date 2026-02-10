@@ -10,6 +10,7 @@ generator client {
 enum Role {
   ADMIN
   USER
+  UPLOADER
 }
 
 enum OrderStatus {
@@ -27,18 +28,30 @@ enum SupportStatus {
   CLOSED
 }
 
+enum Permission {
+  PRODUCTS
+  CATALOGS
+  ORDERS
+  SUPPORT
+  CUSTOMERS
+  UPLOADS
+}
+
 model User {
   id            String           @id @default(uuid())
   email         String           @unique
   username      String           @unique
-  passwordHash  String
+  passwordHash  String?
+  googleId      String?          @unique
   role          Role             @default(USER)
   fullName      String?
   phone         String?
   companyName   String?
+  permissions   Permission[]     @default([])
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
   address       Address?
+  tradeProfile  TradeProfile?
   orders        Order[]
   supportTickets SupportTicket[]
   supportResponses SupportResponse[]
@@ -68,6 +81,9 @@ model Product {
   slug        String            @unique
   summary     String?
   description String?
+  specs       Json?
+  shippingInfo String?
+  careInstructions String?
   price       Decimal           @db.Decimal(10, 2)
   currency    String            @default("INR")
   sku         String?
@@ -86,7 +102,7 @@ model Product {
 
 model ProductImage {
   id        String   @id @default(uuid())
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
   url       String
   alt       String?
@@ -99,7 +115,7 @@ model ProductImage {
 
 model ProductVideo {
   id        String   @id @default(uuid())
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
   url       String
   position  Int      @default(0)
@@ -119,7 +135,7 @@ model Category {
 }
 
 model ProductCategory {
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
   category  Category @relation(fields: [categoryId], references: [id])
   categoryId String
@@ -148,7 +164,7 @@ model OrderItem {
   id        String   @id @default(uuid())
   order     Order    @relation(fields: [orderId], references: [id])
   orderId   String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
   quantity  Int
   price     Decimal  @db.Decimal(10, 2)
@@ -245,6 +261,7 @@ model Catalog {
   coverImageUrl String?
   pdfUrl        String?
   itemsCount    Int?
+  price       Decimal?         @db.Decimal(10, 2)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   items       CatalogProduct[]
@@ -255,7 +272,7 @@ model Catalog {
 model CatalogProduct {
   catalog    Catalog @relation(fields: [catalogId], references: [id])
   catalogId  String
-  product    Product @relation(fields: [productId], references: [id])
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId  String
   position   Int     @default(0)
 
@@ -263,4 +280,23 @@ model CatalogProduct {
   @@index([catalogId])
   @@index([productId])
   @@map("catalog_products")
+}
+
+model TradeProfile {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String   @unique
+  gstNumber      String?
+  businessType   String?
+  annualTurnover String?
+  productInterest String?
+  experience     String?
+  website        String?
+  additionalInfo String?
+  verified       Boolean  @default(false)
+  termsAcceptedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("trade_profiles")
 }

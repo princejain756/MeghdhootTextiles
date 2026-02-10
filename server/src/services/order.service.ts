@@ -1,6 +1,8 @@
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, Prisma, Role } from "@prisma/client";
 import createHttpError from "http-errors";
 import { prisma } from "../lib/prisma";
+import { hashPassword } from "../utils/password";
+import crypto from "crypto";
 
 type OrderItemInput = {
   productId: string;
@@ -28,6 +30,49 @@ type CreateOrderInput = {
 };
 
 export const OrderService = {
+  async createOrderFromWhatsApp(userId: string, items: OrderItemInput[]) {
+    if (!items.length) {
+      throw createHttpError(400, "Order must contain at least one item");
+    }
+
+    const products = await prisma.product.findMany({
+      where: { id: { in: items.map((i) => i.productId) } },
+    });
+
+    if (products.length !== items.length) {
+      throw createHttpError(400, "One or more products could not be found");
+    }
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const total = items.reduce((sum, item) => {
+      const product = productMap.get(item.productId);
+      return sum + (product ? Number(product.price) * item.quantity : 0);
+    }, 0);
+
+    // Create order without reserving stock and without delivery yet.
+    return prisma.order.create({
+      data: {
+        userId,
+        status: OrderStatus.PENDING,
+        total: new Prisma.Decimal(total),
+        items: {
+          create: items.map((item) => {
+            const product = productMap.get(item.productId)!;
+            return {
+              productId: product.id,
+              quantity: item.quantity,
+              price: product.price,
+            };
+          }),
+        },
+      },
+      include: {
+        items: { include: { product: true } },
+        delivery: true,
+      },
+    });
+  },
   async createOrder({ userId, items, delivery }: CreateOrderInput) {
     if (!items.length) {
       throw createHttpError(400, "Order must contain at least one item");
@@ -262,6 +307,72 @@ export const OrderService = {
       },
     });
 
-    return guestOrder;
+    // Attempt to link to an existing user by email or phone
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          ...(orderData.customerDetails.email ? [{ email: orderData.customerDetails.email }] : []),
+          { phone: orderData.customerDetails.phone },
+        ],
+      },
+    });
+
+    let tempPassword: string | undefined;
+    if (!user) {
+      // Create a tracking account with a generated username/password
+      const baseUsername = (orderData.customerDetails.businessName || orderData.customerDetails.customerName)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$|--+/g, "")
+        .slice(0, 20) || "guest";
+      const suffix = Math.random().toString(36).slice(2, 6);
+      const username = `${baseUsername}-${suffix}`;
+      const email = orderData.customerDetails.email || `guest-${Date.now()}-${suffix}@meghdoot.local`; // synthetic email
+      tempPassword = crypto
+        .randomBytes(12)
+        .toString("base64")
+        .replace(/[^A-Za-z0-9]/g, "")
+        .slice(0, 12) + "A@9"; // ensure complexity
+      const passwordHash = await hashPassword(tempPassword);
+      user = await prisma.user.create({
+        data: {
+          email,
+          username,
+          passwordHash,
+          role: Role.USER,
+          fullName: orderData.customerDetails.customerName,
+          phone: orderData.customerDetails.phone,
+          companyName: orderData.customerDetails.businessName,
+        },
+      });
+    }
+
+    // Create a formal order for the user using product links where possible
+    try {
+      const itemsForOrder = orderData.items
+        .map((it) => ({ productId: it.id, quantity: it.quantity }))
+        .filter((i) => typeof i.productId === "string" && i.productId.length > 0 && i.quantity > 0);
+      if (itemsForOrder.length) {
+        await prisma.order.create({
+          data: {
+            userId: user.id,
+            status: OrderStatus.PENDING,
+            total: new Prisma.Decimal(orderData.subtotal),
+            items: {
+              create: orderData.items.map((it) => ({
+                productId: it.id,
+                quantity: it.quantity,
+                price: new Prisma.Decimal(it.price),
+              })),
+            },
+          },
+        });
+      }
+    } catch (err) {
+      // Log and continue; guest order is still created
+      console.warn("Failed to mirror guest order into user order:", err);
+    }
+
+    return { guestOrder, userCreated: user, tempPassword };
   },
 };

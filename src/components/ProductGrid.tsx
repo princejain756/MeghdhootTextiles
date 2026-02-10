@@ -36,17 +36,17 @@ export default function ProductGrid({ limit, category, search, onResultCount }: 
     const term = (search ?? "").trim().toLowerCase();
     const bySearch = term
       ? byCategory.filter((p) => {
-          const haystack = [
-            p.name,
-            p.summary ?? "",
-            p.description ?? "",
-            p.sku ?? "",
-            ...p.categories.map((c) => c.category.name),
-          ]
-            .join("\n")
-            .toLowerCase();
-          return haystack.includes(term);
-        })
+        const haystack = [
+          p.name,
+          p.summary ?? "",
+          p.description ?? "",
+          p.sku ?? "",
+          ...p.categories.map((c) => c.category.name),
+        ]
+          .join("\n")
+          .toLowerCase();
+        return haystack.includes(term);
+      })
       : byCategory;
 
     return typeof limit === "number" ? bySearch.slice(0, limit) : bySearch;

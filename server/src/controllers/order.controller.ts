@@ -41,7 +41,7 @@ export const createOrder = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const listOrders = asyncHandler(async (req: Request, res: Response) => {
-  const includeAll = req.auth?.role === "ADMIN";
+  const includeAll = req.auth?.role === "ADMIN" || req.auth?.permissions?.includes("ORDERS" as any);
   const orders = await OrderService.listOrders(req.auth?.userId, includeAll);
   res.json({ success: true, orders });
 });
@@ -107,7 +107,28 @@ export const createGuestOrder = asyncHandler(async (req: Request, res: Response)
     totalItems: number;
   };
 
-  const guestOrder = await OrderService.createGuestOrder(orderData);
+  const result = await OrderService.createGuestOrder(orderData);
 
-  res.status(201).json({ success: true, order: guestOrder });
+  res.status(201).json({ success: true, order: result.guestOrder, createdUser: result.userCreated ? {
+    id: result.userCreated.id,
+    email: result.userCreated.email,
+    username: result.userCreated.username,
+    role: result.userCreated.role,
+    fullName: result.userCreated.fullName,
+    phone: result.userCreated.phone,
+    companyName: result.userCreated.companyName,
+    createdAt: result.userCreated.createdAt,
+  } : undefined, tempPassword: result.tempPassword });
+});
+
+export const createWhatsappOrder = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.auth) {
+    throw createHttpError(401, "Authentication required");
+  }
+
+  const { items } = req.body as { items: Array<{ productId: string; quantity: number }> };
+
+  const order = await OrderService.createOrderFromWhatsApp(req.auth.userId, items);
+
+  res.status(201).json({ success: true, order });
 });

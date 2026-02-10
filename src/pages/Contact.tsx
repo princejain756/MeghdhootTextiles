@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  MessageSquare, 
-  Phone, 
-  Mail, 
-  MapPin, 
+import {
+  MessageSquare,
+  Phone,
+  Mail,
+  MapPin,
   Clock,
   Users,
   Star,
@@ -44,13 +44,13 @@ const Contact = () => {
   useEffect(() => {
     const category = searchParams.get('category');
     const subject = searchParams.get('subject');
-    
+
     if (category || subject) {
       setFormData(prev => ({
         ...prev,
         category: category || prev.category,
         subject: subject || prev.subject,
-        message: category === 'samples' 
+        message: category === 'samples'
           ? "I would like to request samples of your latest collection. Please provide details about availability, pricing, and shipping options."
           : prev.message
       }));
@@ -72,7 +72,7 @@ const Contact = () => {
       icon: <Phone className="h-6 w-6" />,
       title: "Phone Support",
       description: "Speak directly with our team",
-      contact: "+91 93425 03401",
+      contact: "+91 8088525639",
       availability: "Mon-Sat, 9 AM - 6 PM",
       color: "text-green-600"
     },
@@ -80,7 +80,7 @@ const Contact = () => {
       icon: <MessageCircle className="h-6 w-6" />,
       title: "WhatsApp",
       description: "Quick responses via WhatsApp",
-      contact: "+91 93425 03401",
+      contact: "+91 8088525639",
       availability: "24/7 Support",
       color: "text-green-600"
     },
@@ -88,7 +88,7 @@ const Contact = () => {
       icon: <Mail className="h-6 w-6" />,
       title: "Email Support",
       description: "Detailed queries via email",
-      contact: "blr@meghdoottextiles.com",
+      contact: "info@meghdoottextiles.com",
       availability: "Response within 24 hours",
       color: "text-blue-600"
     },
@@ -105,52 +105,44 @@ const Contact = () => {
   const departments = [
     {
       name: "General Inquiries",
-      email: "blr@meghdoottextiles.com",
-      phone: "+91 93425 03401",
+      email: "info@meghdoottextiles.com",
+      phone: "+91 8088525639",
       description: "General questions about our products and services"
     },
     {
       name: "Trade Account Support",
       email: "trade@meghdoottextiles.com",
-      phone: "+91 93425 03401",
+      phone: "+91 8088525639",
       description: "Support for trade account holders and bulk orders"
     },
     {
       name: "Customer Service",
       email: "support@meghdoottextiles.com",
-      phone: "+91 93425 03401",
+      phone: "+91 8088525639",
       description: "Order support, returns, and customer service"
     },
     {
       name: "Technical Support",
       email: "tech@meghdoottextiles.com",
-      phone: "+91 93425 03401",
+      phone: "+91 8088525639",
       description: "Website issues and technical assistance"
     }
   ];
 
   const officeLocations = [
     {
-      name: "Main Operations Center",
-      address: "Kamela Darwaja, Umarwada, Ring Road\n(Opp. Millennium Textile Market Back Gate)\nSurat – 395002, Gujarat, India",
-      phone: "+91 93425 03401",
-      email: "blr@meghdoottextiles.com",
-      hours: "Mon-Sat: 9:00 AM - 6:00 PM",
-      features: ["Showroom", "Warehouse", "Design Studio", "Customer Service"]
-    },
-    {
       name: "Bengaluru Sales Store",
       address: "No.82, J M Road, Avenue Road cross\nBangalore - 560002",
-      phone: "+91 93425 03401",
-      email: "blr@meghdoottextiles.com",
+      phone: "+91 8088525639",
+      email: "info@meghdoottextiles.com",
       hours: "Mon-Fri: 10:00 AM - 5:00 PM",
       features: ["Sales Office", "Sample Room", "Customer Service"]
     },
     {
       name: "Kolkata Sales Store",
       address: "6th Floor, 95B, Park Street\nOpp : Deputy Commissioner Office\nKolkata, West Bengal 700016",
-      phone: "+91 93425 03401",
-      email: "blr@meghdoottextiles.com",
+      phone: "+91 8088525639",
+      email: "info@meghdoottextiles.com",
       hours: "Mon-Fri: 10:00 AM - 5:00 PM",
       features: ["Sales Office", "Sample Room"]
     }
@@ -388,6 +380,33 @@ const Contact = () => {
                 </CardContent>
               </Card>
 
+              {/* Google Maps */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Find Us on Map
+                  </CardTitle>
+                  <CardDescription>
+                    Locate our Bengaluru office
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="w-full h-[450px] rounded-lg overflow-hidden">
+                    <iframe
+                      src="https://www.google.com/maps?q=Meghdoot+Textiles+Pvt+Ltd,+82+Jumma+Masjid+Road,+Avenue+Road+Cross,+Bengaluru,+Karnataka+560002&output=embed"
+                      width="100%"
+                      height="450"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Meghdoot Textiles Bengaluru Location"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Business Hours */}
               <Card>
                 <CardHeader>
@@ -452,7 +471,7 @@ const Contact = () => {
                   Need immediate assistance? Use these quick contact options
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Button variant="secondary" size="lg" className="bg-white text-primary hover:bg-white/90 h-auto p-6">
                   <div className="text-center">
@@ -461,21 +480,21 @@ const Contact = () => {
                     <div className="text-sm opacity-80">Instant Support</div>
                   </div>
                 </Button>
-                
-                <Button variant="secondary" size="lg" className="bg-white text-primary hover:bg-white/90 h-auto p-6">
-                  <div className="text-center">
+
+                <Button variant="outline" className="h-auto py-6" asChild>
+                  <a href="tel:+918088525639" className="text-center">
                     <Phone className="h-8 w-8 mx-auto mb-3" />
                     <div className="font-semibold">Call Now</div>
-                    <div className="text-sm opacity-80">+91 93425 03401</div>
-                  </div>
+                    <div className="text-sm opacity-80">+91 8088525639</div>
+                  </a>
                 </Button>
-                
-                <Button variant="secondary" size="lg" className="bg-white text-primary hover:bg-white/90 h-auto p-6">
-                  <div className="text-center">
+
+                <Button variant="outline" className="h-auto py-6" asChild>
+                  <a href="mailto:info@meghdoottextiles.com" className="text-center">
                     <Mail className="h-8 w-8 mx-auto mb-3" />
                     <div className="font-semibold">Email Us</div>
-                    <div className="text-sm opacity-80">blr@meghdoottextiles.com</div>
-                  </div>
+                    <div className="text-sm opacity-80">info@meghdoottextiles.com</div>
+                  </a>
                 </Button>
               </div>
             </CardContent>

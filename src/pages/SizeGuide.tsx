@@ -3,12 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Ruler, 
-  User, 
-  Shirt, 
-  Heart, 
-  Info, 
+import {
+  Ruler,
+  User,
+  Shirt,
+  Heart,
+  Info,
   CheckCircle,
   AlertTriangle,
   Download,
@@ -146,8 +146,8 @@ const SizeGuide = () => {
 
   const contactInfo = {
     email: "sizing@meghdoottextiles.com",
-    phone: "+91 93425 03401",
-    address: "Kamela Darwaja, Umarwada, Ring Road, Surat – 395002, Gujarat, India"
+    phone: "+91 8088525639",
+    address: "No.82, J M Road, Avenue Road cross, Bangalore - 560002"
   };
 
   return (
@@ -243,7 +243,7 @@ const SizeGuide = () => {
                           </tbody>
                         </table>
                       </div>
-                      
+
                       <div className="mt-6">
                         <h4 className="font-semibold mb-3">Important Notes:</h4>
                         <ul className="space-y-2">
@@ -327,7 +327,7 @@ const SizeGuide = () => {
                   Our sizing experts are here to help you find the perfect fit. Contact us for personalized sizing advice.
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
@@ -338,7 +338,7 @@ const SizeGuide = () => {
                   <h3 className="font-semibold mb-2">Email Us</h3>
                   <p className="text-sm text-primary-foreground/80">{contactInfo.email}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <div className="p-3 bg-white/10 rounded-full">
@@ -348,7 +348,7 @@ const SizeGuide = () => {
                   <h3 className="font-semibold mb-2">Call Us</h3>
                   <p className="text-sm text-primary-foreground/80">{contactInfo.phone}</p>
                 </div>
-                
+
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <div className="p-3 bg-white/10 rounded-full">

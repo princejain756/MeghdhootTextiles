@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requireRole } from "../middleware/auth";
+import { authenticate, requireRoleOrPermission } from "../middleware/auth";
+import { Permission, Role, SupportStatus } from "@prisma/client";
 import { validate } from "../utils/validate";
 import { addResponse, createTicket, getTicket, listTickets, updateTicketStatus } from "../controllers/support.controller";
-import { Role, SupportStatus } from "@prisma/client";
 
 const router = Router();
 
@@ -49,7 +49,7 @@ router.post(
 router.patch(
   "/:id/status",
   authenticate,
-  requireRole(Role.ADMIN),
+  requireRoleOrPermission(Role.ADMIN, Permission.SUPPORT),
   validate(
     z.object({
       params: z.object({ id: z.string().uuid() }),
